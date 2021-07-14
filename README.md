@@ -1,6 +1,29 @@
-# Mailqueue-go
+<!-- TOC -->
+
+- [Features](#features)
+- [mailqueue-go-api](#mailqueue-go-api)
+    - [email](#email)
+    - [log](#log)
+    - [template](#template)
+    - [read](#read)
+- [mailqueue-go-poll](#mailqueue-go-poll)
+- [Build](#build)
+- [Docker](#docker)
+- [Env](#env)
+    - [api](#api)
+    - [poll](#poll)
+
+<!-- /TOC -->
 
 Simple SMTP HTTP/API client that uses MongoDB as queue.
+
+## Features
+
+- Full attachment support (via base64 encoding or filesystem)
+- Full suppor to Cc, Bcc, reply-to fields
+- HTML template engine
+- Automatic TLS support
+- SMTP client send limiter
 
 ## mailqueue-go-api
 
@@ -45,12 +68,9 @@ This will support white pixel and marks as read email.
 GET /img/mail/:uuid
 ```
 
-## Features
+## mailqueue-go-poll
 
-- Full attachment support (via base64 encoding or filesystem)
-- Full suppor to Cc, Bcc, reply-to fields
-- HTML template engine
-- Automatic TLS support
+This is the SMTP client, it will refer to one email account service.
 
 ## Build
 
@@ -72,7 +92,7 @@ docker-compose up
 
 You have to setup variables in yout bash environnment or in your `docker-compose.yml`
 
-### API
+### api
 
 ```bash
 export MONGO_ENDPOINT=mongodb://admin:pass@localhost:27017/admin?authSource=admin
@@ -83,7 +103,7 @@ export BIND_ADDRESS=":8080"
 export LOG_OUTPUT="stdout"
 ```
 
-### POLL
+### poll
 
 ```bash
 export MONGO_ENDPOINT=mongodb://admin:pass@localhost:27017/admin?authSource=admin
