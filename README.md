@@ -1,19 +1,4 @@
-<!-- TOC -->
-
-- [Features](#features)
-- [mailqueue-go-api](#mailqueue-go-api)
-    - [email](#email)
-    - [log](#log)
-    - [template](#template)
-    - [read](#read)
-- [mailqueue-go-poll](#mailqueue-go-poll)
-- [Build](#build)
-- [Docker](#docker)
-- [Env](#env)
-    - [api](#api)
-    - [poll](#poll)
-
-<!-- /TOC -->
+# Mailqueue-go
 
 Simple SMTP HTTP/API client that uses MongoDB as queue.
 
