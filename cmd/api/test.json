@@ -1,0 +1,13 @@
+{
+    "service": "myservice",
+    "from":"user@example.com",
+    "fromname":"Mario Rossi",
+    "replyto":"user@example.com",
+    "to":"user2@example.com",
+    "cc":"user3@example.com",
+    "bcc":"user4example.com",
+    "subject":"hello",
+    "data":"{\"world\":\"world!\"}",
+    "template":"test",
+    "attachments":null
+}
