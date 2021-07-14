@@ -2,8 +2,8 @@
 
 build:
 	mkdir -p bin
-	go build -o ./bin/api ./cmd/api
-	go build -o ./bin/poll ./cmd/poll
+	go build -o ./bin/api ./cmd/mailqueue-go-api
+	go build -o ./bin/poll ./cmd/mailqueue-go-poll
 
 test:
 	go test ./... -v
