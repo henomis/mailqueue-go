@@ -13,6 +13,11 @@ import (
 	"github.com/henomis/mailqueue-go/pkg/trace"
 )
 
+type AgnosticQueue interface {
+	Enqueue(interface{}) error
+	Dequeue() (interface{}, error)
+}
+
 func main() {
 
 	endpoint := os.Getenv("MONGO_ENDPOINT")
