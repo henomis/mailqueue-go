@@ -22,7 +22,7 @@ func main() {
 
 	q, err := mongowatchablequeue.NewMongoQueue(
 		&mongowatchablequeue.MongoWatchableQueueOptions{
-			MongoEndpoint:       "mongodb+srv://admin:s0n0su4tl4s@cluster0.3jd0r.mongodb.net/?retryWrites=true&w=majority",
+			MongoEndpoint:       "mongodb+srv://admin:mypassword@cluster0.3jd0r.mongodb.net/?retryWrites=true&w=majority",
 			MongoDatabase:       "prova",
 			MongoCollection:     "test",
 			MongoCappedSize:     10000,
