@@ -3,58 +3,58 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"strconv"
 	"time"
 
 	mongowatchablequeue "github.com/henomis/mailqueue-go/pkg/watchablequeue/mongo"
 )
 
-type Pippo struct {
+type MyDocument struct {
 	Name  string `bson:"name"`
 	Value int64  `bson:"value"`
 	Sent  bool   `bson:"sent"`
 }
 
-func (p *Pippo) String() string {
+func (p *MyDocument) String() string {
 	return fmt.Sprintf("name: %s value: %d", p.Name, p.Value)
 }
 
 func main() {
 
-	q, err := mongowatchablequeue.NewMongoQueue(
-		&mongowatchablequeue.MongoWatchableQueueOptions{
-			MongoEndpoint:       "mongodb+srv://admin:mypassword@cluster0.3jd0r.mongodb.net/?retryWrites=true&w=majority",
-			MongoDatabase:       "prova",
-			MongoCollection:     "test",
-			MongoCappedSize:     10000,
-			MongoDocumentFilter: `{"value.sent":false}`,
-			MongoUpdateOnCommit: `{"$set": {"value.sent": true}}`,
-		},
-	)
-	// , "prova", "test", 10000)
+	mongoCappedSize := os.Getenv("MONGO_CAPPED_SIZE")
+	mongoCappedSizeInt, err := strconv.ParseInt(mongoCappedSize, 10, 64)
 	if err != nil {
 		panic(err)
 	}
 
-	pippo := Pippo{
+	q, err := mongowatchablequeue.NewMongoQueue(
+		&mongowatchablequeue.MongoWatchableQueueOptions{
+			MongoEndpoint:       os.Getenv("MONGO_ENDPOINT"),
+			MongoDatabase:       os.Getenv("MONGO_DATABASE"),
+			MongoCollection:     os.Getenv("MONGO_COLLECTION"),
+			MongoCappedSize:     mongoCappedSizeInt,
+			MongoDocumentFilter: `{"value.sent":false}`,
+			MongoUpdateOnCommit: `{"$set": {"value.sent": true}}`,
+		},
+	)
 
-		Name:  "pippo3",
+	if err != nil {
+		panic(err)
+	}
+
+	document1 := MyDocument{
+		Name:  "Winston",
 		Value: time.Now().Unix(),
 		Sent:  false,
 	}
-	pippo2 := &mongowatchablequeue.MongoElement{}
+	container2 := &mongowatchablequeue.MongoElement{}
 
 	container := &mongowatchablequeue.MongoElement{
-		Value: pippo,
+		Value: document1,
 	}
 
-	// q.Enqueue(&pippo)
-
-	// err = q.Dequeue(&pippo2)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	ch, err := q.Watch(pippo2)
+	ch, err := q.Watch(container2)
 	if err != nil {
 		panic(err)
 	}
@@ -72,15 +72,6 @@ func main() {
 
 		}
 	}()
-
-	// go func(channel <-chan interface{}) {
-	// 	for v := range ch {
-
-	// 		e := v.(*Pippo)
-	// 		log.Printf("%+v\n", e)
-	// 	}
-
-	// }(ch)
 
 	time.Sleep(1 * time.Second)
 	log.Println("equeue")
