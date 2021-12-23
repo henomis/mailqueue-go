@@ -33,12 +33,13 @@ func main() {
 
 	q, err := mongowatchablequeue.NewMongoQueue(
 		&mongowatchablequeue.MongoWatchableQueueOptions{
-			MongoEndpoint:       os.Getenv("MONGO_ENDPOINT"),
-			MongoDatabase:       os.Getenv("MONGO_DATABASE"),
-			MongoCollection:     os.Getenv("MONGO_COLLECTION"),
-			MongoCappedSize:     mongoCappedSizeInt,
-			MongoDocumentFilter: `{"value.sent":false}`,
-			MongoUpdateOnCommit: `{"$set": {"value.sent": true}}`,
+			MongoEndpoint:            os.Getenv("MONGO_ENDPOINT"),
+			MongoDatabase:            os.Getenv("MONGO_DATABASE"),
+			MongoCollection:          os.Getenv("MONGO_COLLECTION"),
+			MongoCappedSize:          mongoCappedSizeInt,
+			MongoDocumentFilterQuery: `{"value.sent":false}`,
+			MongoUpdateOnCommitQuery: `{"$set": {"value.sent": true}}`,
+			MongoSetStatusQuery:      `bson.M{"$set": bson.M{"status": %d}}`,
 		},
 		limiter,
 	)

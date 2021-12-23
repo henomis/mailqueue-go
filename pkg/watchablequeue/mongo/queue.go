@@ -19,8 +19,9 @@ type MongoWatchableQueue struct {
 	mongoCollectionWatchedFlag   mongoWatchableQueueFlag
 	mongoQueueLimiter            limiter.Limiter
 
-	MongoDocumentFilter bson.M
-	MongoUpdateOnCommit bson.M
+	mongoDocumentFilterQuery string
+	mongoUpdateOnCommitQuery string
+	mongoSetStatusQuery      string
 }
 
 func NewMongoQueue(mongoOptions *MongoWatchableQueueOptions, queueLimiter limiter.Limiter) (*MongoWatchableQueue, error) {
@@ -37,11 +38,8 @@ func NewMongoQueue(mongoOptions *MongoWatchableQueueOptions, queueLimiter limite
 		return nil, err
 	}
 
-	err = mongoQueue.setupMongoFilterAndUpdateCommit(mongoOptions)
-	if err != nil {
-		return nil, err
-	}
-
+	mongoQueue.mongoDocumentFilterQuery = mongoOptions.MongoDocumentFilterQuery
+	mongoQueue.mongoUpdateOnCommitQuery = mongoOptions.MongoUpdateOnCommitQuery
 	mongoQueue.mongoQueueLimiter = queueLimiter
 
 	return mongoQueue, err
@@ -124,7 +122,45 @@ func (q *MongoWatchableQueue) Commit(element interface{}) error {
 		return err
 	}
 
-	_, err = q.mongoCollection.UpdateOne(context.Background(), bson.M{"_id": mongoElement.ID}, q.MongoUpdateOnCommit)
+	mongoUpdateOnCommitQuery, err := q.buildMongoUpdateOnCommitQuery()
+	if err != nil {
+		return err
+	}
+
+	_, err = q.mongoCollection.UpdateOne(context.Background(), bson.M{"_id": mongoElement.ID}, mongoUpdateOnCommitQuery)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (q *MongoWatchableQueue) SetStatus(element interface{}, status int64) error {
+
+	mongoElement, err := validateMongoElement(element)
+	if err != nil {
+		return err
+	}
+
+	mongoSetStatusQuery, err := q.buildMongoSetStatusQuery(status)
+	if err != nil {
+		return err
+	}
+
+	_, err = q.mongoCollection.UpdateOne(context.Background(), bson.M{"_id": mongoElement.ID}, mongoSetStatusQuery)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (q *MongoWatchableQueue) Get(element interface{}) error {
+
+	mongoElement, err := validateMongoElement(element)
+	if err != nil {
+		return err
+	}
+
+	_, err = q.mongoCollection.UpdateOne(context.Background(), bson.M{"_id": mongoElement.ID}, element)
 	if err != nil {
 		return err
 	}
