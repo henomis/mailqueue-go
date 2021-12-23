@@ -5,22 +5,17 @@ import (
 	"time"
 )
 
-var allowedRequests = 30
+var allowedRequests = int64(30)
 var allowedInterval = 1 * time.Minute
 
 func TestAllow(t *testing.T) {
 
-	s := &MockSleeper{
-		Ts: time.Now(),
-	}
-
 	l := &DefaultLimiter{
 		Allowed:  allowedRequests,
 		Interval: allowedInterval,
-		Sleeper:  s,
 	}
 
-	allowed := 0
+	allowed := int64(0)
 	rejected := 0
 
 	t.Run("100 requests", func(t *testing.T) {
@@ -51,10 +46,10 @@ func TestAllow(t *testing.T) {
 				rejected++
 			}
 
-			s.Sleep(1 * time.Second)
+			time.Sleep(1 * time.Second)
 		}
 
-		expected := int(100/allowed) * allowed
+		expected := int64(100/allowed) * allowed
 
 		if allowed != expected {
 			t.Errorf("Expected %d got %d", expected, allowed)

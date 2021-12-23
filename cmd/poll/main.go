@@ -26,10 +26,10 @@ func main() {
 	tmoI, _ := strconv.Atoi(os.Getenv("MONGO_TIMEOUT"))
 	tmoD := time.Duration(tmoI) * time.Second
 
-	allow, _ := strconv.Atoi(os.Getenv("SMTP_ALLOW"))
+	allow, _ := strconv.ParseInt(os.Getenv("SMTP_ALLOW"), 10, 64)
 	interval, _ := strconv.Atoi(os.Getenv("SMTP_INTERVAL_MINUTE"))
 
-	limit := limiter.NewDefaultLimiter(allow, time.Duration(interval)*time.Minute, &limiter.RealSleeper{})
+	limit := limiter.NewDefaultLimiter(allow, time.Duration(interval)*time.Minute)
 	queue := queue.NewMongoDBQueue(queue.MongoDBOptions{Endpoint: endpoint, Database: db, CappedSize: cappedSize, Timeout: 0}, limit, nil)
 	l := log.NewMongoDBLog(log.MongoDBOptions{Endpoint: endpoint, Database: db, Timeout: tmoD})
 	t := trace.NewFileTracer(os.Getenv("LOG_OUTPUT"))

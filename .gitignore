@@ -2,3 +2,4 @@ bin
 vendor
 .vscode
 go.sum
+pkg/watchablequeue/examples/cmd/.env
