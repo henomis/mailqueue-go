@@ -40,6 +40,7 @@ func NewMongoQueue(mongoOptions *MongoWatchableQueueOptions, queueLimiter limite
 
 	mongoQueue.mongoDocumentFilterQuery = mongoOptions.MongoDocumentFilterQuery
 	mongoQueue.mongoUpdateOnCommitQuery = mongoOptions.MongoUpdateOnCommitQuery
+	mongoQueue.mongoSetStatusQuery = mongoOptions.MongoSetStatusQuery
 	mongoQueue.mongoQueueLimiter = queueLimiter
 
 	return mongoQueue, err

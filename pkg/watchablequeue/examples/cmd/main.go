@@ -8,13 +8,15 @@ import (
 	"time"
 
 	"github.com/henomis/mailqueue-go/pkg/limiter"
+	"github.com/henomis/mailqueue-go/pkg/watchablequeue"
 	mongowatchablequeue "github.com/henomis/mailqueue-go/pkg/watchablequeue/mongo"
 )
 
 type MyDocument struct {
-	Name  string `bson:"name"`
-	Value int64  `bson:"value"`
-	Sent  bool   `bson:"sent"`
+	Name   string `bson:"name"`
+	Value  int64  `bson:"value"`
+	Sent   bool   `bson:"sent"`
+	Status int64  `bson:"status"`
 }
 
 func (p *MyDocument) String() string {
@@ -39,7 +41,7 @@ func main() {
 			MongoCappedSize:          mongoCappedSizeInt,
 			MongoDocumentFilterQuery: `{"value.sent":false}`,
 			MongoUpdateOnCommitQuery: `{"$set": {"value.sent": true}}`,
-			MongoSetStatusQuery:      `bson.M{"$set": bson.M{"status": %d}}`,
+			MongoSetStatusQuery:      `{"$set": {"value.status": %d}}`,
 		},
 		limiter,
 	)
@@ -49,9 +51,10 @@ func main() {
 	}
 
 	document1 := MyDocument{
-		Name:  "Winston",
-		Value: time.Now().Unix(),
-		Sent:  false,
+		Name:   "Winston",
+		Value:  time.Now().Unix(),
+		Sent:   false,
+		Status: watchablequeue.StatusEnqueued,
 	}
 	container2 := &mongowatchablequeue.MongoElement{}
 
@@ -72,6 +75,7 @@ func main() {
 
 				log.Println("dec ", g)
 				q.Commit(g)
+				q.SetStatus(g, watchablequeue.StatusDequeued)
 			}
 
 		}
