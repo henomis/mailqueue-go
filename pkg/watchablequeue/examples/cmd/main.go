@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/henomis/mailqueue-go/pkg/limiter"
 	mongowatchablequeue "github.com/henomis/mailqueue-go/pkg/watchablequeue/mongo"
 )
 
@@ -28,6 +29,8 @@ func main() {
 		panic(err)
 	}
 
+	limiter := limiter.NewDefaultLimiter(3, 1*time.Minute, &limiter.RealSleeper{})
+
 	q, err := mongowatchablequeue.NewMongoQueue(
 		&mongowatchablequeue.MongoWatchableQueueOptions{
 			MongoEndpoint:       os.Getenv("MONGO_ENDPOINT"),
@@ -37,6 +40,7 @@ func main() {
 			MongoDocumentFilter: `{"value.sent":false}`,
 			MongoUpdateOnCommit: `{"$set": {"value.sent": true}}`,
 		},
+		limiter,
 	)
 
 	if err != nil {
@@ -68,7 +72,6 @@ func main() {
 				log.Println("dec ", g)
 				q.Commit(g)
 			}
-			//			q.Commit()
 
 		}
 	}()
