@@ -29,7 +29,7 @@ func main() {
 		panic(err)
 	}
 
-	limiter := limiter.NewDefaultLimiter(3, 1*time.Minute, &limiter.RealSleeper{})
+	limiter := limiter.NewDefaultLimiter(1, 3*time.Second, &limiter.RealSleeper{})
 
 	q, err := mongowatchablequeue.NewMongoQueue(
 		&mongowatchablequeue.MongoWatchableQueueOptions{
@@ -77,9 +77,15 @@ func main() {
 	}()
 
 	time.Sleep(1 * time.Second)
-	log.Println("equeue")
-	q.Enqueue(container)
+	for i := 0; i < 10; i++ {
 
-	time.Sleep(10 * time.Second)
+		log.Println("equeue:", i)
+		document1.Value = time.Now().UnixMicro()
+		container.Value = document1
+		err = q.Enqueue(container)
+		log.Println("enc ", err)
+	}
+
+	time.Sleep(100 * time.Second)
 
 }
