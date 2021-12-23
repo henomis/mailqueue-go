@@ -20,3 +20,9 @@ func validateMongoElement(element interface{}) (*MongoElement, error) {
 
 	return mongoElement, nil
 }
+
+func NewEmptyMongoElement(element interface{}) *MongoElement {
+	return &MongoElement{
+		Value: element,
+	}
+}

@@ -89,6 +89,13 @@ func main() {
 		container.Value = document1
 		err = q.Enqueue(container)
 		log.Println("enc ", err)
+
+		c := mongowatchablequeue.NewEmptyMongoElement(
+			MyDocument{},
+		)
+		c.ID = container.ID
+		q.Get(c)
+		log.Println("res:", c)
 	}
 
 	time.Sleep(100 * time.Second)

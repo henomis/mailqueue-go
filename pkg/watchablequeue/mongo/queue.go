@@ -55,6 +55,7 @@ func (q *MongoWatchableQueue) Enqueue(element interface{}) error {
 	mongoElement.ID = randomObjectID()
 
 	_, err = q.mongoCollection.InsertOne(context.Background(), mongoElement)
+
 	return err
 }
 
@@ -161,9 +162,10 @@ func (q *MongoWatchableQueue) Get(element interface{}) error {
 		return err
 	}
 
-	_, err = q.mongoCollection.UpdateOne(context.Background(), bson.M{"_id": mongoElement.ID}, element)
+	err = q.mongoCollection.FindOne(context.Background(), bson.M{"_id": mongoElement.ID}).Decode(element)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
