@@ -29,7 +29,7 @@ func main() {
 		panic(err)
 	}
 
-	limiter := limiter.NewDefaultLimiter(1, 3*time.Second, &limiter.RealSleeper{})
+	limiter := limiter.NewDefaultLimiter(1, 3*time.Second)
 
 	q, err := mongowatchablequeue.NewMongoQueue(
 		&mongowatchablequeue.MongoWatchableQueueOptions{

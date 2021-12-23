@@ -19,9 +19,6 @@ func TestMongoDB(t *testing.T) {
 		Limiter: &limiter.DefaultLimiter{
 			Allowed:  10,
 			Interval: 1 * time.Minute,
-			Sleeper: &limiter.MockSleeper{
-				Ts: time.Now(),
-			},
 		},
 		Options: MongoDBOptions{
 			CappedSize: 1000000,
