@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"strconv"
 	"time"
 
 	mongowatchablequeue "github.com/henomis/mailqueue-go/pkg/watchablequeue/mongo"
@@ -20,17 +22,23 @@ func (p *Pippo) String() string {
 
 func main() {
 
+	mongoCappedSize := os.Getenv("MONGO_CAPPED_SIZE")
+	mongoCappedSizeInt, err := strconv.ParseInt(mongoCappedSize, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+
 	q, err := mongowatchablequeue.NewMongoQueue(
 		&mongowatchablequeue.MongoWatchableQueueOptions{
-			MongoEndpoint:       "mongodb+srv://admin:mypassword@cluster0.3jd0r.mongodb.net/?retryWrites=true&w=majority",
-			MongoDatabase:       "prova",
-			MongoCollection:     "test",
-			MongoCappedSize:     10000,
+			MongoEndpoint:       os.Getenv("MONGO_ENDPOINT"),
+			MongoDatabase:       os.Getenv("MONGO_DATABASE"),
+			MongoCollection:     os.Getenv("MONGO_COLLECTION"),
+			MongoCappedSize:     mongoCappedSizeInt,
 			MongoDocumentFilter: `{"value.sent":false}`,
 			MongoUpdateOnCommit: `{"$set": {"value.sent": true}}`,
 		},
 	)
-	// , "prova", "test", 10000)
+
 	if err != nil {
 		panic(err)
 	}
@@ -46,13 +54,6 @@ func main() {
 	container := &mongowatchablequeue.MongoElement{
 		Value: pippo,
 	}
-
-	// q.Enqueue(&pippo)
-
-	// err = q.Dequeue(&pippo2)
-	// if err != nil {
-	// 	panic(err)
-	// }
 
 	ch, err := q.Watch(pippo2)
 	if err != nil {
