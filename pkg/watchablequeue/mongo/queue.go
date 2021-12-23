@@ -3,7 +3,9 @@ package mongowatchablequeue
 import (
 	"context"
 	"fmt"
+	"time"
 
+	"github.com/henomis/mailqueue-go/pkg/limiter"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -15,12 +17,13 @@ type MongoWatchableQueue struct {
 	mongoCollectionCursor        *mongo.Cursor
 	mongoCollectionCursorChannel chan interface{}
 	mongoCollectionWatchedFlag   mongoWatchableQueueFlag
+	mongoQueueLimiter            limiter.Limiter
 
 	MongoDocumentFilter bson.M
 	MongoUpdateOnCommit bson.M
 }
 
-func NewMongoQueue(mongoOptions *MongoWatchableQueueOptions) (*MongoWatchableQueue, error) {
+func NewMongoQueue(mongoOptions *MongoWatchableQueueOptions, queueLimiter limiter.Limiter) (*MongoWatchableQueue, error) {
 
 	mongoQueue := &MongoWatchableQueue{}
 
@@ -38,6 +41,8 @@ func NewMongoQueue(mongoOptions *MongoWatchableQueueOptions) (*MongoWatchableQue
 	if err != nil {
 		return nil, err
 	}
+
+	mongoQueue.mongoQueueLimiter = queueLimiter
 
 	return mongoQueue, err
 }
@@ -66,13 +71,13 @@ func (q *MongoWatchableQueue) Dequeue(element interface{}) error {
 	}
 
 	//waiting limiter
-	// for {
-	// 	if q.Limiter.Allow() {
-	// 		break
-	// 	}
-	// 	//waiting limiter
-	// 	time.Sleep(1 * time.Second)
-	// }
+	for {
+		if q.mongoQueueLimiter.Allow() {
+			break
+		}
+		//waiting limiter
+		time.Sleep(1 * time.Second)
+	}
 
 	return q.mongoCollectionCursor.Decode(element)
 
