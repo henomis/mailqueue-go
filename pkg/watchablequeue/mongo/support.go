@@ -73,21 +73,6 @@ func (q *MongoWatchableQueue) selectDatabaseAndCollection(mongoOptions *MongoWat
 
 }
 
-func (q *MongoWatchableQueue) setupMongoFilterAndUpdateCommit(mongoOptions *MongoWatchableQueueOptions) error {
-
-	err := json.Unmarshal([]byte(mongoOptions.MongoDocumentFilter), &q.MongoDocumentFilter)
-	if err != nil {
-		return err
-	}
-
-	err = json.Unmarshal([]byte(mongoOptions.MongoUpdateOnCommit), &q.MongoUpdateOnCommit)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (q *MongoWatchableQueue) createCappedCollectionIfNotExists(mongoCappedCollection string, mongoCappedCollectionSize *int64) error {
 
 	mongoCollections, err := q.mongoDatabase.ListCollectionNames(context.Background(), bson.D{}, nil)
@@ -117,10 +102,13 @@ func (q *MongoWatchableQueue) createCappedCollectionIfNotExists(mongoCappedColle
 
 func (q *MongoWatchableQueue) setTailableMongoCursor() error {
 
-	var err error
+	mongoDocumentFilterQuery, err := q.buildMongoDocumentFilterQuery()
+	if err != nil {
+		return err
+	}
 
 	mongoCollectionCursorOptions := options.Find().SetCursorType(options.TailableAwait)
-	q.mongoCollectionCursor, err = q.mongoCollection.Find(context.Background(), q.MongoDocumentFilter, mongoCollectionCursorOptions)
+	q.mongoCollectionCursor, err = q.mongoCollection.Find(context.Background(), mongoDocumentFilterQuery, mongoCollectionCursorOptions)
 
 	return err
 }
@@ -163,6 +151,43 @@ func (q *MongoWatchableQueue) waitNextMongoDocument() error {
 
 	return nil
 
+}
+
+func (q *MongoWatchableQueue) buildMongoDocumentFilterQuery() (bson.M, error) {
+
+	mongoDocumentFilterQuery := &bson.M{}
+
+	err := json.Unmarshal([]byte(q.mongoDocumentFilterQuery), mongoDocumentFilterQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	return *mongoDocumentFilterQuery, nil
+}
+
+func (q *MongoWatchableQueue) buildMongoUpdateOnCommitQuery() (bson.M, error) {
+
+	mongoUpdateOnCommitQuery := &bson.M{}
+
+	err := json.Unmarshal([]byte(q.mongoUpdateOnCommitQuery), mongoUpdateOnCommitQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	return *mongoUpdateOnCommitQuery, nil
+}
+
+func (q *MongoWatchableQueue) buildMongoSetStatusQuery(status int64) (bson.M, error) {
+
+	mongoSetStatusQuery := &bson.M{}
+	setStatusQuery := fmt.Sprintf(q.mongoSetStatusQuery, status)
+
+	err := json.Unmarshal([]byte(setStatusQuery), mongoSetStatusQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	return *mongoSetStatusQuery, nil
 }
 
 func (q *MongoWatchableQueue) closeMongoCollectionCursorChannels() {
