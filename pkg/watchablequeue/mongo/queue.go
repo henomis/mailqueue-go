@@ -54,6 +54,8 @@ func (q *MongoWatchableQueue) Enqueue(element interface{}) error {
 	}
 	mongoElement.ID = randomObjectID()
 
+	//TODO: insert reder here
+
 	_, err = q.mongoCollection.InsertOne(context.Background(), mongoElement)
 
 	return err
