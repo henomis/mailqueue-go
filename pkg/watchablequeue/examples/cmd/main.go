@@ -10,13 +10,13 @@ import (
 	mongowatchablequeue "github.com/henomis/mailqueue-go/pkg/watchablequeue/mongo"
 )
 
-type Pippo struct {
+type MyDocument struct {
 	Name  string `bson:"name"`
 	Value int64  `bson:"value"`
 	Sent  bool   `bson:"sent"`
 }
 
-func (p *Pippo) String() string {
+func (p *MyDocument) String() string {
 	return fmt.Sprintf("name: %s value: %d", p.Name, p.Value)
 }
 
@@ -43,19 +43,18 @@ func main() {
 		panic(err)
 	}
 
-	pippo := Pippo{
-
-		Name:  "pippo3",
+	document1 := MyDocument{
+		Name:  "Winston",
 		Value: time.Now().Unix(),
 		Sent:  false,
 	}
-	pippo2 := &mongowatchablequeue.MongoElement{}
+	container2 := &mongowatchablequeue.MongoElement{}
 
 	container := &mongowatchablequeue.MongoElement{
-		Value: pippo,
+		Value: document1,
 	}
 
-	ch, err := q.Watch(pippo2)
+	ch, err := q.Watch(container2)
 	if err != nil {
 		panic(err)
 	}
@@ -73,15 +72,6 @@ func main() {
 
 		}
 	}()
-
-	// go func(channel <-chan interface{}) {
-	// 	for v := range ch {
-
-	// 		e := v.(*Pippo)
-	// 		log.Printf("%+v\n", e)
-	// 	}
-
-	// }(ch)
 
 	time.Sleep(1 * time.Second)
 	log.Println("equeue")
