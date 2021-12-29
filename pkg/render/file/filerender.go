@@ -4,6 +4,8 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+
+	"github.com/henomis/mailqueue-go/pkg/render"
 )
 
 //FileRender implementation with file
@@ -12,7 +14,7 @@ type FileRender struct {
 }
 
 //Set implemetation
-func (fr *FileRender) Set(k Key, v Value) error {
+func (fr *FileRender) Set(k string, v interface{}) error {
 
 	f, err := os.Create(fr.Path + string(k))
 	if err != nil {
@@ -20,7 +22,7 @@ func (fr *FileRender) Set(k Key, v Value) error {
 	}
 	defer f.Close()
 
-	_, err = f.Write([]byte(v))
+	_, err = f.Write([]byte(v.(string)))
 	if err != nil {
 		return err
 	}
@@ -29,7 +31,7 @@ func (fr *FileRender) Set(k Key, v Value) error {
 }
 
 //Get implemetation
-func (fr *FileRender) Get(k Key) (Value, error) {
+func (fr *FileRender) Get(k string) (interface{}, error) {
 	f, err := os.Open(fr.Path + string(k))
 	if err != nil {
 		return nil, err
@@ -41,12 +43,12 @@ func (fr *FileRender) Get(k Key) (Value, error) {
 		return nil, err
 	}
 
-	return (Value(b)), nil
+	return (string(b)), nil
 
 }
 
 //Execute implemetation
-func (fr *FileRender) Execute(r io.Reader, w io.Writer, k Key) error {
+func (fr *FileRender) Execute(r io.Reader, w io.Writer, k string) error {
 
 	//Get template
 	v, err := fr.Get(k)
@@ -60,12 +62,12 @@ func (fr *FileRender) Execute(r io.Reader, w io.Writer, k Key) error {
 		return err
 	}
 
-	j, err := createJSON(data)
+	j, err := render.CreateTemplateDataObject(data)
 	if err != nil {
 		return err
 	}
 
-	err = merge(v, w, j)
+	err = render.Merge(v.(string), j, w)
 	if err != nil {
 		return err
 	}
