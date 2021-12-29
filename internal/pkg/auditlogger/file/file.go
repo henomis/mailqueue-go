@@ -12,11 +12,11 @@ type FileAuditLogger struct {
 	logger *log.Logger
 }
 
-func NewFileAuditLogger(outputWriter *io.Writer) *FileAuditLogger {
+func NewFileAuditLogger(outputWriter io.Writer) *FileAuditLogger {
 
 	fileAuditLogger := &FileAuditLogger{}
 	fileAuditLogger.logger = &log.Logger{}
-	fileAuditLogger.logger.SetOutput(*outputWriter)
+	fileAuditLogger.logger.SetOutput(outputWriter)
 
 	return fileAuditLogger
 
