@@ -20,19 +20,19 @@ type FileAuditLogger struct {
 //NewFileAuditLogger func
 func NewFileAuditLogger(outputWriter *io.Writer) *FileAuditLogger {
 
-	t := &FileAuditLogger{}
-	t.logger = &log.Logger{}
-	t.logger.SetOutput(*outputWriter)
+	fileAuditLogger := &FileAuditLogger{}
+	fileAuditLogger.logger = &log.Logger{}
+	fileAuditLogger.logger.SetOutput(*outputWriter)
 
-	return t
+	return fileAuditLogger
 
 }
 
 //Trace implementation
-func (t *FileAuditLogger) Trace(mode auditlogger.Mode, format string, v ...interface{}) {
+func (f *FileAuditLogger) Trace(mode auditlogger.Mode, format string, v ...interface{}) {
 
-	if t == nil {
+	if f == nil {
 		return
 	}
-	t.logger.Printf("["+strings.ToUpper(string(mode))+"] "+format+"\n", v...)
+	f.logger.Printf("["+strings.ToUpper(string(mode))+"] "+format+"\n", v...)
 }
