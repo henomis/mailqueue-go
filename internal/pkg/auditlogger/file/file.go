@@ -8,16 +8,10 @@ import (
 	"github.com/henomis/mailqueue-go/internal/pkg/auditlogger"
 )
 
-const (
-	filePrefix = "file://"
-)
-
-//FileAuditLogger struct
 type FileAuditLogger struct {
 	logger *log.Logger
 }
 
-//NewFileAuditLogger func
 func NewFileAuditLogger(outputWriter *io.Writer) *FileAuditLogger {
 
 	fileAuditLogger := &FileAuditLogger{}
@@ -28,8 +22,7 @@ func NewFileAuditLogger(outputWriter *io.Writer) *FileAuditLogger {
 
 }
 
-//Trace implementation
-func (f *FileAuditLogger) Trace(mode auditlogger.Mode, format string, v ...interface{}) {
+func (f *FileAuditLogger) Log(mode auditlogger.Mode, format string, v ...interface{}) {
 
 	if f == nil {
 		return
