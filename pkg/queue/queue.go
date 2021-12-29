@@ -6,9 +6,9 @@ import (
 
 const (
 	//ErrLimitError limiter error
-	ErrLimitError = "Limit reached"
+	ErrLimitError = "limit reached"
 	//ErrNotAttached client error
-	ErrNotAttached = "Queue not attached"
+	ErrNotAttached = "queue not attached"
 )
 
 //Queue implementation

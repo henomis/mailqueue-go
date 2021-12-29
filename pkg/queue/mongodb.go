@@ -166,7 +166,7 @@ func (q *MongoDB) Enqueue(e *email.Email) (email.UniqueID, error) {
 	buff := []byte{}
 	bufferWriter := bytes.NewBuffer(buff)
 
-	err := q.Template.Execute(bufferReader, bufferWriter, render.Key(e.Template))
+	err := q.Template.Execute(bufferReader, bufferWriter, string(e.Template))
 	if err != nil {
 		return "", err
 	}
@@ -194,6 +194,7 @@ func (q *MongoDB) Enqueue(e *email.Email) (email.UniqueID, error) {
 }
 
 //Dequeue implementation in mongoDB. This may block
+// deprecated
 func (q *MongoDB) Dequeue() (*email.Email, error) {
 
 	if q.client == nil {

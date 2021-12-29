@@ -12,7 +12,7 @@ import (
 	"github.com/henomis/mailqueue-go/pkg/app"
 	"github.com/henomis/mailqueue-go/pkg/log"
 	"github.com/henomis/mailqueue-go/pkg/queue"
-	"github.com/henomis/mailqueue-go/pkg/render"
+	mongorender "github.com/henomis/mailqueue-go/pkg/render/mongo"
 	"github.com/henomis/mailqueue-go/pkg/trace"
 )
 
@@ -26,7 +26,10 @@ func main() {
 
 	bindAddress := os.Getenv("BIND_ADDRESS")
 
-	tmpl := render.NewMongoRender(timeoutD, endpoint, db)
+	tmpl, err := mongorender.NewMongoRender(timeoutD, endpoint, db)
+	if err != nil {
+		panic(err)
+	}
 	q := queue.NewMongoDBQueue(queue.MongoDBOptions{Endpoint: endpoint, Database: db, CappedSize: cappedSize, Timeout: timeoutD}, nil, tmpl)
 	l := log.NewMongoDBLog(log.MongoDBOptions{Endpoint: endpoint, Database: db, Timeout: timeoutD})
 	t := trace.NewFileTracer(os.Getenv("LOG_OUTPUT"))
