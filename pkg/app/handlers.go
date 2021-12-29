@@ -2,8 +2,8 @@ package app
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/henomis/mailqueue-go/internal/pkg/auditlogger"
 	"github.com/henomis/mailqueue-go/pkg/email"
-	"github.com/henomis/mailqueue-go/pkg/trace"
 )
 
 type queryParameters struct {
@@ -44,7 +44,7 @@ func (a *App) readEmail(c *fiber.Ctx) error {
 	c.Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	c.Set("Content-Type", "image/gif")
 
-	a.Tracer.Trace(trace.Info, "readEmail: %s", uuid)
+	a.AuditLogger.Log(auditlogger.Info, "readEmail: %s", uuid)
 
 	return c.Send(GIF)
 
@@ -59,11 +59,11 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 
 	uuid, err := a.Queue.Enqueue(&e)
 	if err != nil {
-		a.Tracer.Trace(trace.Error, "enqueueEmail: %s", err.Error())
+		a.AuditLogger.Log(auditlogger.Error, "enqueueEmail: %s", err.Error())
 		return c.Status(400).SendString(err.Error())
 	}
 
-	a.Tracer.Trace(trace.Info, "enqueueEmail: %s", string(uuid))
+	a.AuditLogger.Log(auditlogger.Info, "enqueueEmail: %s", string(uuid))
 	a.Queue.SetStatus(&email.Email{UUID: email.UniqueID(uuid)}, email.StatusQueued)
 
 	return c.JSON(uuid)
@@ -88,7 +88,7 @@ func (a *App) getEmail(c *fiber.Ctx) error {
 
 	e, err := a.Queue.GetByUUID(email.UniqueID(uuid))
 	if err != nil {
-		a.Tracer.Trace(trace.Error, "getEmail: %s", err.Error())
+		a.AuditLogger.Log(auditlogger.Error, "getEmail: %s", err.Error())
 		return c.Status(400).SendString(err.Error())
 	}
 

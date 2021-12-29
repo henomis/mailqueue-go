@@ -5,12 +5,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/henomis/mailqueue-go/internal/pkg/auditlogger"
+	fileauditlogger "github.com/henomis/mailqueue-go/internal/pkg/auditlogger/file"
 	"github.com/henomis/mailqueue-go/pkg/app"
 	"github.com/henomis/mailqueue-go/pkg/limiter"
 	"github.com/henomis/mailqueue-go/pkg/log"
 	"github.com/henomis/mailqueue-go/pkg/queue"
 	"github.com/henomis/mailqueue-go/pkg/sendmail"
-	"github.com/henomis/mailqueue-go/pkg/trace"
 )
 
 type AgnosticQueue interface {
@@ -32,7 +33,7 @@ func main() {
 	limit := limiter.NewDefaultLimiter(allow, time.Duration(interval)*time.Minute)
 	queue := queue.NewMongoDBQueue(queue.MongoDBOptions{Endpoint: endpoint, Database: db, CappedSize: cappedSize, Timeout: 0}, limit, nil)
 	l := log.NewMongoDBLog(log.MongoDBOptions{Endpoint: endpoint, Database: db, Timeout: tmoD})
-	t := trace.NewFileTracer(os.Getenv("LOG_OUTPUT"))
+	t := fileauditlogger.NewFileAuditLogger(os.Stdout)
 
 	clientOpt := &sendmail.Options{
 		Server:   os.Getenv("SMTP_SERVER"),
@@ -47,10 +48,10 @@ func main() {
 	//smtp := sendmail.NewMockSMTPClient(clientOpt)
 
 	opt := app.Options{
-		Queue:  queue,
-		Logger: l,
-		Tracer: t,
-		SMTP:   smtp,
+		Queue:       queue,
+		Logger:      l,
+		AuditLogger: t,
+		SMTP:        smtp,
 	}
 
 	poll, err := app.NewApp(opt)
@@ -61,7 +62,7 @@ func main() {
 
 	err = poll.RunPoll()
 	if err != nil {
-		t.Trace(trace.Error, "RunPoll: %s", err.Error())
+		t.Log(auditlogger.Error, "RunPoll: %s", err.Error())
 	}
 
 }

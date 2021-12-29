@@ -9,11 +9,12 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	flimiter "github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/henomis/mailqueue-go/internal/pkg/auditlogger"
+	fileauditlogger "github.com/henomis/mailqueue-go/internal/pkg/auditlogger/file"
 	"github.com/henomis/mailqueue-go/pkg/app"
 	"github.com/henomis/mailqueue-go/pkg/log"
 	"github.com/henomis/mailqueue-go/pkg/queue"
 	mongorender "github.com/henomis/mailqueue-go/pkg/render/mongo"
-	"github.com/henomis/mailqueue-go/pkg/trace"
 )
 
 func main() {
@@ -32,7 +33,7 @@ func main() {
 	}
 	q := queue.NewMongoDBQueue(queue.MongoDBOptions{Endpoint: endpoint, Database: db, CappedSize: cappedSize, Timeout: timeoutD}, nil, tmpl)
 	l := log.NewMongoDBLog(log.MongoDBOptions{Endpoint: endpoint, Database: db, Timeout: timeoutD})
-	t := trace.NewFileTracer(os.Getenv("LOG_OUTPUT"))
+	t := fileauditlogger.NewFileAuditLogger(os.Stdout)
 
 	f := fiber.New(fiber.Config{
 		StrictRouting: true,
@@ -45,10 +46,10 @@ func main() {
 	}))
 
 	opt := app.Options{
-		Logger: l,
-		Queue:  q,
-		Tracer: t,
-		Server: f,
+		Logger:      l,
+		Queue:       q,
+		AuditLogger: t,
+		Server:      f,
 	}
 
 	server, err := app.NewApp(opt)
@@ -59,7 +60,7 @@ func main() {
 
 	err = server.RunAPI(bindAddress)
 	if err != nil {
-		t.Trace(trace.Error, "RunAPI: %s", err.Error())
+		t.Log(auditlogger.Error, "RunAPI: %s", err.Error())
 	}
 
 }
