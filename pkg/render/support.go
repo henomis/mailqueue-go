@@ -64,7 +64,7 @@ func Merge(templateBody string, templateDataObject map[string]interface{}, outpu
 		return err
 	}
 
-	if err = parsedTemplate.Execute(outputDataWriter, &templateDataObject); err != nil {
+	if err = parsedTemplate.Execute(outputDataWriter, templateDataObject); err != nil {
 		return err
 	}
 
