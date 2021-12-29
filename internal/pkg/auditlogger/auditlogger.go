@@ -1,6 +1,5 @@
 package auditlogger
 
-//Mode enum type
 type Mode string
 
 const (
@@ -12,7 +11,6 @@ const (
 	Error = "ERROR"
 )
 
-//Tracer interface
 type AuditLogger interface {
-	Trace(Mode, string, ...interface{})
+	Log(Mode, string, ...interface{})
 }
