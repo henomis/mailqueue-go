@@ -5,66 +5,65 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
+	"github.com/henomis/mailqueue-go/internal/pkg/auditlogger"
 	"github.com/henomis/mailqueue-go/pkg/email"
-	"github.com/henomis/mailqueue-go/pkg/log"
 	mlog "github.com/henomis/mailqueue-go/pkg/log"
 	"github.com/henomis/mailqueue-go/pkg/queue"
 	"github.com/henomis/mailqueue-go/pkg/sendmail"
-	"github.com/henomis/mailqueue-go/pkg/trace"
 )
 
 //App struct
 type App struct {
-	Queue  queue.Queue
-	SMTP   sendmail.Client
-	Server *fiber.App
-	Log    mlog.Logger
-	Tracer trace.Tracer
+	Queue       queue.Queue
+	SMTP        sendmail.Client
+	Server      *fiber.App
+	Log         mlog.Logger
+	AuditLogger auditlogger.AuditLogger
 }
 
 //Options for App
 type Options struct {
-	Queue  queue.Queue
-	Logger mlog.Logger
-	Tracer trace.Tracer
-	SMTP   sendmail.Client
-	Server *fiber.App
+	Queue       queue.Queue
+	Logger      mlog.Logger
+	AuditLogger auditlogger.AuditLogger
+	SMTP        sendmail.Client
+	Server      *fiber.App
 }
 
 //NewApp Creates a new app instance
 func NewApp(opt Options) (*App, error) {
 
 	app := &App{
-		Server: opt.Server,
-		SMTP:   opt.SMTP,
-		Queue:  opt.Queue,
-		Log:    opt.Logger,
-		Tracer: opt.Tracer,
+		Server:      opt.Server,
+		SMTP:        opt.SMTP,
+		Queue:       opt.Queue,
+		Log:         opt.Logger,
+		AuditLogger: opt.AuditLogger,
 	}
 
 	for {
 
-		app.Tracer.Trace(trace.Info, "Attach queue: connecting...")
+		app.AuditLogger.Log(auditlogger.Info, "Attach queue: connecting...")
 		err := opt.Queue.Attach()
 		if err != nil {
-			app.Tracer.Trace(trace.Error, "Attach queue: %s", err)
+			app.AuditLogger.Log(auditlogger.Error, "Attach queue: %s", err)
 			time.Sleep(1 * time.Second)
 			continue
 		}
-		app.Tracer.Trace(trace.Info, "Attach queue: connection ok")
+		app.AuditLogger.Log(auditlogger.Info, "Attach queue: connection ok")
 		break
 	}
 
 	for {
 
-		app.Tracer.Trace(trace.Info, "Attach log: connecting...")
+		app.AuditLogger.Log(auditlogger.Info, "Attach log: connecting...")
 		err := opt.Logger.Attach()
 		if err != nil {
-			app.Tracer.Trace(trace.Error, "Attach queue: %s", err)
+			app.AuditLogger.Log(auditlogger.Error, "Attach queue: %s", err)
 			time.Sleep(1 * time.Second)
 			continue
 		}
-		app.Tracer.Trace(trace.Info, "Attach log: connection ok")
+		app.AuditLogger.Log(auditlogger.Info, "Attach log: connection ok")
 		break
 	}
 
@@ -104,13 +103,13 @@ func (a *App) RunPoll() error {
 
 		e, err := a.Queue.Dequeue()
 		if err != nil {
-			a.Tracer.Trace(trace.Error, "Dequeue: %s", err.Error())
+			a.AuditLogger.Log(auditlogger.Error, "Dequeue: %s", err.Error())
 			return err
 		}
 
-		a.Tracer.Trace(trace.Info, "Dequeued: %s", string(e.UUID))
+		a.AuditLogger.Log(auditlogger.Info, "Dequeued: %s", string(e.UUID))
 
-		entry := &log.Log{
+		entry := &mlog.Log{
 			Service: e.Service,
 			Status:  email.StatusDequeued,
 			UUID:    e.UUID,
@@ -119,7 +118,7 @@ func (a *App) RunPoll() error {
 
 		for i := 0; i < attempts; i++ {
 
-			a.Tracer.Trace(trace.Info, "Sending: %s", string(e.UUID))
+			a.AuditLogger.Log(auditlogger.Info, "Sending: %s", string(e.UUID))
 
 			entry.Status = email.StatusSending
 			entry.Error = ""
@@ -127,14 +126,14 @@ func (a *App) RunPoll() error {
 			err = a.SMTP.Send(e)
 
 			if err == nil {
-				a.Tracer.Trace(trace.Info, "Send: sent %s", string(e.UUID))
+				a.AuditLogger.Log(auditlogger.Info, "Send: sent %s", string(e.UUID))
 				a.Queue.Commit(e)
 				entry.Status = email.StatusSent
 				a.Log.Log(entry)
 				break
 			}
 
-			a.Tracer.Trace(trace.Warning, "Send: %s, %s", string(e.UUID), err.Error())
+			a.AuditLogger.Log(auditlogger.Warning, "Send: %s, %s", string(e.UUID), err.Error())
 			entry.Status = email.StatusErrorSending
 			entry.Error = err.Error()
 			a.Log.Log(entry)
@@ -142,7 +141,7 @@ func (a *App) RunPoll() error {
 		}
 
 		if err != nil {
-			a.Tracer.Trace(trace.Error, "Canceled: %s", err.Error())
+			a.AuditLogger.Log(auditlogger.Error, "Canceled: %s", err.Error())
 			a.Queue.Commit(e)
 			entry.Status = email.StatusErrorCanceled
 			entry.Error = err.Error()
