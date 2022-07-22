@@ -5,13 +5,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/henomis/mailqueue-go/internal/pkg/app"
 	"github.com/henomis/mailqueue-go/internal/pkg/auditlogger"
 	fileauditlogger "github.com/henomis/mailqueue-go/internal/pkg/auditlogger/file"
-	"github.com/henomis/mailqueue-go/pkg/app"
-	"github.com/henomis/mailqueue-go/pkg/limiter"
-	"github.com/henomis/mailqueue-go/pkg/log"
-	"github.com/henomis/mailqueue-go/pkg/queue"
-	"github.com/henomis/mailqueue-go/pkg/sendmail"
+	"github.com/henomis/mailqueue-go/internal/pkg/limiter"
+	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
+	"github.com/henomis/mailqueue-go/internal/pkg/mongoemailqueue"
+	"github.com/henomis/mailqueue-go/internal/pkg/sendmail"
 )
 
 type AgnosticQueue interface {
@@ -21,21 +21,47 @@ type AgnosticQueue interface {
 
 func main() {
 
-	endpoint := os.Getenv("MONGO_ENDPOINT")
-	db := os.Getenv("MONGO_DB")
-	cappedSize, _ := strconv.ParseInt(os.Getenv("MONGO_DB_SIZE"), 10, 64)
-	tmoI, _ := strconv.Atoi(os.Getenv("MONGO_TIMEOUT"))
-	tmoD := time.Duration(tmoI) * time.Second
+	mongoEndpoint := os.Getenv("MONGO_ENDPOINT")
+	mongoDatabase := os.Getenv("MONGO_DB")
+	mongoEmailDBSize, _ := strconv.ParseUint(os.Getenv("MONGO_EMAIL_DB_SIZE"), 10, 64)
+	mongoLogDBSize, _ := strconv.ParseUint(os.Getenv("MONGO_LOG_DB_SIZE"), 10, 64)
+	mongoTimeoutAsInt, _ := strconv.Atoi(os.Getenv("MONGO_TIMEOUT"))
+	mongoTimeoutAsDuration := time.Duration(mongoTimeoutAsInt) * time.Second
 
-	allow, _ := strconv.ParseInt(os.Getenv("SMTP_ALLOW"), 10, 64)
-	interval, _ := strconv.Atoi(os.Getenv("SMTP_INTERVAL_MINUTE"))
+	limiterAllowed, _ := strconv.ParseUint(os.Getenv("SMTP_ALLOW"), 10, 64)
+	limiterInterval, _ := strconv.Atoi(os.Getenv("SMTP_INTERVAL_MINUTE"))
 
-	limit := limiter.NewDefaultLimiter(allow, time.Duration(interval)*time.Minute)
-	queue := queue.NewMongoDBQueue(queue.MongoDBOptions{Endpoint: endpoint, Database: db, CappedSize: cappedSize, Timeout: 0}, limit, nil)
-	l := log.NewMongoDBLog(log.MongoDBOptions{Endpoint: endpoint, Database: db, Timeout: tmoD})
+	fixedWindowLiminter := limiter.NewFixedWindowLimiter(limiterAllowed, time.Duration(limiterInterval)*time.Minute)
+
+	queue, err := mongoemailqueue.New(
+		&mongoemailqueue.MongoEmailQueueOptions{
+			Endpoint:   mongoEndpoint,
+			Database:   mongoDatabase,
+			Collection: "queue",
+			CappedSize: mongoEmailDBSize,
+			Timeout:    mongoTimeoutAsDuration,
+		},
+		fixedWindowLiminter,
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	log, err := mongoemaillog.New(
+		&mongoemaillog.MongoEmailLogOptions{
+			Endpoint:   mongoEndpoint,
+			Database:   mongoDatabase,
+			Collection: "log",
+			CappedSize: mongoLogDBSize,
+			Timeout:    mongoTimeoutAsDuration,
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
 	t := fileauditlogger.NewFileAuditLogger(os.Stdout)
 
-	clientOpt := &sendmail.Options{
+	smtpClientOptions := &sendmail.Options{
 		Server:   os.Getenv("SMTP_SERVER"),
 		Username: os.Getenv("SMTP_USERNAME"),
 		Password: os.Getenv("SMTP_PASSWORD"),
@@ -44,14 +70,13 @@ func main() {
 		ReplyTo:  os.Getenv("SMTP_REPLYTO"),
 		Attempts: os.Getenv("SMTP_ATTEMPTS"),
 	}
-	smtp := sendmail.NewMailYakClient(clientOpt)
-	//smtp := sendmail.NewMockSMTPClient(clientOpt)
+	smtpClient := sendmail.NewMailYakClient(smtpClientOptions)
 
 	opt := app.Options{
 		Queue:       queue,
-		Logger:      l,
+		Log:         log,
 		AuditLogger: t,
-		SMTP:        smtp,
+		SMTP:        smtpClient,
 	}
 
 	poll, err := app.NewApp(opt)

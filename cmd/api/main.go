@@ -9,30 +9,58 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	flimiter "github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/henomis/mailqueue-go/internal/pkg/app"
 	"github.com/henomis/mailqueue-go/internal/pkg/auditlogger"
 	fileauditlogger "github.com/henomis/mailqueue-go/internal/pkg/auditlogger/file"
-	"github.com/henomis/mailqueue-go/pkg/app"
-	"github.com/henomis/mailqueue-go/pkg/log"
-	"github.com/henomis/mailqueue-go/pkg/queue"
-	mongorender "github.com/henomis/mailqueue-go/pkg/render/mongo"
+	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
+	"github.com/henomis/mailqueue-go/internal/pkg/mongoemailqueue"
+
+	mongorender "github.com/henomis/mailqueue-go/internal/pkg/render/mongo"
 )
 
 func main() {
 
-	endpoint := os.Getenv("MONGO_ENDPOINT")
-	db := os.Getenv("MONGO_DB")
-	cappedSize, _ := strconv.ParseInt(os.Getenv("MONGO_DB_SIZE"), 10, 64)
-	timeoutI, _ := strconv.Atoi(os.Getenv("MONGO_TIMEOUT"))
-	timeoutD := time.Duration(timeoutI) * time.Second
+	mongoEndpoint := os.Getenv("MONGO_ENDPOINT")
+	mongoDatabase := os.Getenv("MONGO_DB")
+	mongoEmailDBSize, _ := strconv.ParseUint(os.Getenv("MONGO_EMAIL_DB_SIZE"), 10, 64)
+	mongoLogDBSize, _ := strconv.ParseUint(os.Getenv("MONGO_LOG_DB_SIZE"), 10, 64)
+	mongoTimeoutAsInt, _ := strconv.Atoi(os.Getenv("MONGO_TIMEOUT"))
+	mongoTimeoutAsDuration := time.Duration(mongoTimeoutAsInt) * time.Second
 
 	bindAddress := os.Getenv("BIND_ADDRESS")
 
-	tmpl, err := mongorender.NewMongoRender(timeoutD, endpoint, db)
+	tmpl, err := mongorender.NewMongoRender(mongoTimeoutAsDuration, mongoEndpoint, mongoDatabase)
 	if err != nil {
 		panic(err)
 	}
-	q := queue.NewMongoDBQueue(queue.MongoDBOptions{Endpoint: endpoint, Database: db, CappedSize: cappedSize, Timeout: timeoutD}, nil, tmpl)
-	l := log.NewMongoDBLog(log.MongoDBOptions{Endpoint: endpoint, Database: db, Timeout: timeoutD})
+	_ = tmpl
+
+	queue, err := mongoemailqueue.New(
+		&mongoemailqueue.MongoEmailQueueOptions{
+			Endpoint:   mongoEndpoint,
+			Database:   mongoDatabase,
+			Collection: "queue",
+			CappedSize: mongoEmailDBSize,
+			Timeout:    mongoTimeoutAsDuration,
+		},
+		nil,
+	)
+	if err != nil {
+		panic(err)
+	}
+	log, err := mongoemaillog.New(
+		&mongoemaillog.MongoEmailLogOptions{
+			Endpoint:   mongoEndpoint,
+			Database:   mongoDatabase,
+			Collection: "log",
+			CappedSize: mongoLogDBSize,
+			Timeout:    mongoTimeoutAsDuration,
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
 	t := fileauditlogger.NewFileAuditLogger(os.Stdout)
 
 	f := fiber.New(fiber.Config{
@@ -46,8 +74,8 @@ func main() {
 	}))
 
 	opt := app.Options{
-		Logger:      l,
-		Queue:       q,
+		Log:         log,
+		Queue:       queue,
 		AuditLogger: t,
 		Server:      f,
 	}

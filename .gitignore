@@ -1,6 +1,7 @@
 bin
 vendor
 .vscode
+.DS_Store
 go.sum
 pkg/watchablequeue/examples/cmd/.env
 pkg/render/examples/cmd/.env
