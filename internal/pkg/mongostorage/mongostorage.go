@@ -20,7 +20,6 @@ type MongoStorage struct {
 	database        string
 	collection      string
 	cappedSize      uint64
-	filterQuery     MongoQuery
 	mongoClient     *mongo.Client
 	mongoCollection *mongo.Collection
 	mongoCursor     *mongo.Cursor
@@ -32,7 +31,6 @@ func New(
 	database string,
 	collection string,
 	cappedSize uint64,
-	filterQuery MongoQuery,
 ) (*MongoStorage, error) {
 
 	mongoClient, err := newMongoClient(endpoint)
@@ -46,7 +44,6 @@ func New(
 		database:    database,
 		collection:  collection,
 		cappedSize:  cappedSize,
-		filterQuery: filterQuery,
 	}, nil
 }
 
@@ -108,7 +105,7 @@ func (ms *MongoStorage) CreateCappedCollection() error {
 
 }
 
-func (ms *MongoStorage) Insert(data interface{}) (interface{}, error) {
+func (ms *MongoStorage) InsertOne(data interface{}) (interface{}, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), ms.timeout)
 	defer cancel()
 
@@ -118,6 +115,34 @@ func (ms *MongoStorage) Insert(data interface{}) (interface{}, error) {
 	}
 
 	return insertOneResult.InsertedID, nil
+}
+
+func (ms *MongoStorage) FindOne(filterQuery MongoQuery, data interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), ms.timeout)
+	defer cancel()
+
+	err := ms.mongoCollection.FindOne(ctx, filterQuery).Decode(data)
+	if err != nil {
+		return errors.Wrap(err, "unable find data")
+	}
+
+	return nil
+}
+
+func (ms *MongoStorage) ReplaceOrInsert(filterQuery MongoQuery, data interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), ms.timeout)
+	defer cancel()
+
+	isTrue := true
+	mongoReplaceOptions := &options.ReplaceOptions{
+		Upsert: &isTrue,
+	}
+	_, err := ms.mongoCollection.ReplaceOne(ctx, filterQuery, data, mongoReplaceOptions)
+	if err != nil {
+		return errors.Wrap(err, "unable replace data")
+	}
+
+	return nil
 }
 
 func (ms *MongoStorage) Decode(data interface{}) error {
@@ -165,14 +190,14 @@ func (ms *MongoStorage) Update(filterQuery MongoQuery, updateQuery interface{}) 
 
 }
 
-func (ms *MongoStorage) WaitCappedCollectionCursor() error {
+func (ms *MongoStorage) WaitCappedCollectionCursor(filterQuery MongoQuery) error {
 
-	err := ms.setupTailableAwaitCursor(ms.filterQuery)
+	err := ms.setupTailableAwaitCursor(filterQuery)
 	if err != nil {
 		return errors.Wrap(err, "unable setup tailable await cursor")
 	}
 
-	err = ms.waitCursor()
+	err = ms.waitCursor(filterQuery)
 	if err != nil {
 		return errors.Wrap(err, "error waiting cursor")
 	}
@@ -180,7 +205,7 @@ func (ms *MongoStorage) WaitCappedCollectionCursor() error {
 	return nil
 }
 
-func (ms *MongoStorage) setupTailableAwaitCursor(query MongoQuery) error {
+func (ms *MongoStorage) setupTailableAwaitCursor(filterQuery MongoQuery) error {
 
 	if ms.mongoCursor != nil {
 		return nil
@@ -191,7 +216,7 @@ func (ms *MongoStorage) setupTailableAwaitCursor(query MongoQuery) error {
 
 	mongoFindOptions := options.Find().SetCursorType(options.TailableAwait).SetNoCursorTimeout(true)
 
-	mongoCursor, err := ms.mongoCollection.Find(ctx, query, mongoFindOptions)
+	mongoCursor, err := ms.mongoCollection.Find(ctx, filterQuery, mongoFindOptions)
 	if err != nil {
 		return err
 	}
@@ -201,7 +226,7 @@ func (ms *MongoStorage) setupTailableAwaitCursor(query MongoQuery) error {
 	return nil
 }
 
-func (ms *MongoStorage) waitCursor() error {
+func (ms *MongoStorage) waitCursor(filterQuery MongoQuery) error {
 
 	for {
 
@@ -213,7 +238,7 @@ func (ms *MongoStorage) waitCursor() error {
 			//empty collection
 			// log.Println("empty collection")
 			time.Sleep(1 * time.Second)
-			ms.setupTailableAwaitCursor(ms.filterQuery)
+			ms.setupTailableAwaitCursor(filterQuery)
 			continue
 		} else if err := ms.mongoCursor.Err(); err != nil {
 			ms.mongoCursor = nil

@@ -37,7 +37,6 @@ func New(mongoQueueOptions *MongoEmailQueueOptions, limiter limiter.Limiter) (*M
 		mongoQueueOptions.Database,
 		mongoQueueOptions.Collection,
 		mongoQueueOptions.CappedSize,
-		mongostorage.Query(`{"sent": false}`),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable create mongostorage")
@@ -64,7 +63,7 @@ func New(mongoQueueOptions *MongoEmailQueueOptions, limiter limiter.Limiter) (*M
 
 func (q *MongoEmailQueue) Enqueue(email *email.Email) (string, error) {
 
-	id, err := q.mongoStorage.Insert(email)
+	id, err := q.mongoStorage.InsertOne(email)
 	if err != nil {
 		return "", errors.Wrap(err, "unable to insert data")
 	}
@@ -75,7 +74,8 @@ func (q *MongoEmailQueue) Enqueue(email *email.Email) (string, error) {
 
 func (q *MongoEmailQueue) Dequeue() (*email.Email, error) {
 
-	err := q.mongoStorage.WaitCappedCollectionCursor()
+	filterQuery := mongostorage.Query(`{"sent": false}`)
+	err := q.mongoStorage.WaitCappedCollectionCursor(filterQuery)
 	if err != nil {
 		return nil, errors.Wrap(err, "error waiting for capped collection cursor")
 	}

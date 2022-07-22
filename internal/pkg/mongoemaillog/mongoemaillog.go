@@ -34,8 +34,7 @@ func New(mongoEmailLogOptions *MongoEmailLogOptions) (*MongoEmailLog, error) {
 		mongoEmailLogOptions.Timeout,
 		mongoEmailLogOptions.Database,
 		mongoEmailLogOptions.Collection,
-		100,
-		nil,
+		mongoEmailLogOptions.CappedSize,
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable create mongostorage")
@@ -59,7 +58,7 @@ func New(mongoEmailLogOptions *MongoEmailLogOptions) (*MongoEmailLog, error) {
 
 func (mel *MongoEmailLog) Log(log *email.Log) (string, error) {
 
-	id, err := mel.mongoStorage.Insert(log)
+	id, err := mel.mongoStorage.InsertOne(log)
 	if err != nil {
 		return "", errors.Wrap(err, "unable to insert data")
 	}
@@ -87,17 +86,17 @@ func (ml *MongoEmailLog) Items(emailID string) ([]email.Log, error) {
 // Support methods
 // ---------------
 
-func validateMongoEmailLogOptions(mongoLogOptions *MongoEmailLogOptions) error {
+func validateMongoEmailLogOptions(mongoEmailLogOptions *MongoEmailLogOptions) error {
 
-	if len(mongoLogOptions.Endpoint) == 0 {
+	if len(mongoEmailLogOptions.Endpoint) == 0 {
 		return fmt.Errorf("invalid endpoint")
 	}
 
-	if len(mongoLogOptions.Database) == 0 {
+	if len(mongoEmailLogOptions.Database) == 0 {
 		return fmt.Errorf("invalid database name")
 	}
 
-	if len(mongoLogOptions.Collection) == 0 {
+	if len(mongoEmailLogOptions.Collection) == 0 {
 		return fmt.Errorf("invalid collection name")
 	}
 

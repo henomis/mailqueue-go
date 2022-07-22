@@ -1,22 +1,27 @@
-package render
+package filerender
 
 import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 
 	"github.com/henomis/mailqueue-go/internal/pkg/render"
 )
 
 //FileRender implementation with file
 type FileRender struct {
-	Path string
+	path string
+}
+
+func New(path string) (*FileRender, error) {
+	return &FileRender{path: path}, nil
 }
 
 //Set implemetation
 func (fr *FileRender) Set(k string, v interface{}) error {
 
-	f, err := os.Create(fr.Path + string(k))
+	f, err := os.Create(path.Join(fr.path, string(k)))
 	if err != nil {
 		return err
 	}
@@ -32,7 +37,7 @@ func (fr *FileRender) Set(k string, v interface{}) error {
 
 //Get implemetation
 func (fr *FileRender) Get(k string) (interface{}, error) {
-	f, err := os.Open(fr.Path + string(k))
+	f, err := os.Open(path.Join(fr.path, string(k)))
 	if err != nil {
 		return nil, err
 	}

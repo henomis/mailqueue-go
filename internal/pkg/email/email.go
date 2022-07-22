@@ -20,13 +20,6 @@ const (
 	StatusErrorCanceled
 )
 
-//Attachment struct
-type Attachment struct {
-	Name string `json:"name" bson:"name"`
-	Mime string `json:"mime" bson:"mime"`
-	Data string `json:"data" bson:"data"`
-}
-
 //Email represent email structure
 type Email struct {
 	ID          string       `json:"uuid" bson:"_id"`
@@ -44,4 +37,11 @@ type Email struct {
 	Attachments []Attachment `json:"attachments" bson:"attachments"`
 	Sent        bool         `json:"sent" bson:"sent"`
 	Status      int          `json:"status" bson:"status"`
+}
+
+//Attachment struct
+type Attachment struct {
+	Name string `json:"name" bson:"name"`
+	Mime string `json:"mime" bson:"mime"`
+	Data string `json:"data" bson:"data"`
 }

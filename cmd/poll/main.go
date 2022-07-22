@@ -11,13 +11,8 @@ import (
 	"github.com/henomis/mailqueue-go/internal/pkg/limiter"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemailqueue"
-	"github.com/henomis/mailqueue-go/internal/pkg/sendmail"
+	"github.com/henomis/mailqueue-go/internal/pkg/sendmail/mailyakclient"
 )
-
-type AgnosticQueue interface {
-	Enqueue(interface{}) error
-	Dequeue() (interface{}, error)
-}
 
 func main() {
 
@@ -61,16 +56,17 @@ func main() {
 	}
 	t := fileauditlogger.NewFileAuditLogger(os.Stdout)
 
-	smtpClientOptions := &sendmail.Options{
-		Server:   os.Getenv("SMTP_SERVER"),
-		Username: os.Getenv("SMTP_USERNAME"),
-		Password: os.Getenv("SMTP_PASSWORD"),
-		From:     os.Getenv("SMTP_FROM"),
-		FromName: os.Getenv("SMTP_FROMNAME"),
-		ReplyTo:  os.Getenv("SMTP_REPLYTO"),
-		Attempts: os.Getenv("SMTP_ATTEMPTS"),
-	}
-	smtpClient := sendmail.NewMailYakClient(smtpClientOptions)
+	smtpClient := mailyakclient.New(
+		&mailyakclient.MailYakClientOptions{
+			Server:   os.Getenv("SMTP_SERVER"),
+			Username: os.Getenv("SMTP_USERNAME"),
+			Password: os.Getenv("SMTP_PASSWORD"),
+			From:     os.Getenv("SMTP_FROM"),
+			FromName: os.Getenv("SMTP_FROMNAME"),
+			ReplyTo:  os.Getenv("SMTP_REPLYTO"),
+			Attempts: os.Getenv("SMTP_ATTEMPTS"),
+		},
+	)
 
 	opt := app.Options{
 		Queue:       queue,

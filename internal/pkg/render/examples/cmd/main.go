@@ -4,44 +4,49 @@ import (
 	"bytes"
 	"io"
 	"log"
-	"os"
 	"strings"
 	"time"
 
-	mongorender "github.com/henomis/mailqueue-go/internal/pkg/render/mongo"
+	"github.com/henomis/mailqueue-go/internal/pkg/render/mongorender"
 )
 
 const (
-	MongoKey = "template1"
+	key = "template1"
 )
 
 func main() {
 
-	mongoRender, err := mongorender.NewMongoRender(
-		10*time.Second,
-		os.Getenv("MONGO_ENDPOINT"),
-		os.Getenv("MONGO_DATABASE"),
+	render, err := mongorender.New(
+		&mongorender.MongoRenderOptions{
+			Endpoint:   "mongodb://localhost:27017",
+			Database:   "test",
+			Collection: "template",
+			Timeout:    time.Second * 5,
+		},
 	)
+
+	// render, err := filerender.New("./templates")
+
 	if err != nil {
 		panic(err)
 	}
 
-	err = mongoRender.Set(MongoKey, "<html><body>Hello {{.nome}}</body></html>")
+	err = render.Set(key, "<html><body>Hello {{.nome}}</body></html>")
 	if err != nil {
 		panic(err)
 	}
 
-	mongoValue, err := mongoRender.Get(MongoKey)
+	value, err := render.Get(key)
 	if err != nil {
 		panic(err)
 	}
-	log.Println("Key ", MongoKey, " Value: ", mongoValue)
+	log.Println("Key ", key, " Value: ", value)
 
 	templateData := `{"nome": "Mr. Winston"}`
 	var output bytes.Buffer
 	bufferWriter := io.Writer(&output)
 
-	mongoRender.Execute(strings.NewReader(templateData), bufferWriter, "template1")
+	render.Execute(strings.NewReader(templateData), bufferWriter, "template1")
 
 	log.Println("Render: ", output.String())
 

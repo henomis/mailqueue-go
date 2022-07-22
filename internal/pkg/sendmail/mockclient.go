@@ -4,27 +4,21 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"strconv"
 	"time"
 
 	"github.com/henomis/mailqueue-go/internal/pkg/email"
 )
 
-//MockSMTPClient sends email using MailYak package
 type MockSMTPClient struct {
-	options *Options
+	attempts int
 }
 
-//NewMockSMTPClient returns a new MailYak smtp client
-func NewMockSMTPClient(options *Options) *MockSMTPClient {
-
+func New(attempts int) *MockSMTPClient {
 	return &MockSMTPClient{
-		options: options,
+		attempts: attempts,
 	}
-
 }
 
-//Send implements sending email
 func (c *MockSMTPClient) Send(e *email.Email) error {
 	fmt.Printf("SENDING %+v\n", e)
 
@@ -37,8 +31,6 @@ func (c *MockSMTPClient) Send(e *email.Email) error {
 	return nil
 }
 
-//Attempts return attempts
 func (c *MockSMTPClient) Attempts() int {
-	a, _ := strconv.Atoi(c.options.Attempts)
-	return a
+	return c.attempts
 }

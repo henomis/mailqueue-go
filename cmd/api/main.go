@@ -15,7 +15,7 @@ import (
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemailqueue"
 
-	mongorender "github.com/henomis/mailqueue-go/internal/pkg/render/mongo"
+	"github.com/henomis/mailqueue-go/internal/pkg/render/mongorender"
 )
 
 func main() {
@@ -29,7 +29,14 @@ func main() {
 
 	bindAddress := os.Getenv("BIND_ADDRESS")
 
-	tmpl, err := mongorender.NewMongoRender(mongoTimeoutAsDuration, mongoEndpoint, mongoDatabase)
+	tmpl, err := mongorender.New(
+		&mongorender.MongoRenderOptions{
+			Endpoint:   mongoEndpoint,
+			Database:   mongoDatabase,
+			Collection: "templates",
+			Timeout:    mongoTimeoutAsDuration,
+		},
+	)
 	if err != nil {
 		panic(err)
 	}
