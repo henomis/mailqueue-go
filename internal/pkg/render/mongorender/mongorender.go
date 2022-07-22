@@ -61,7 +61,7 @@ func New(mongoRenderOptions *MongoRenderOptions) (*MongoRender, error) {
 
 func (mr *MongoRender) Set(key string, value interface{}) error {
 
-	filterQuery := mongostorage.Queryf(`{_id: "%s"}`, key)
+	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, key)
 	mongoTemplate := MongoTemplate{
 		ID:       key,
 		Template: value.(string),
@@ -78,7 +78,7 @@ func (mr *MongoRender) Get(key string) (interface{}, error) {
 
 	var mongoTemplate MongoTemplate
 
-	filterQuery := mongostorage.Queryf(`{_id: "%s"}`, key)
+	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, key)
 	err := mr.mongoStorage.FindOne(filterQuery, &mongoTemplate)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable find template")
@@ -92,7 +92,7 @@ func (mr *MongoRender) Execute(inputDataReader io.Reader, outputDataWriter io.Wr
 
 	mongoTemplateBody, err := mr.Get(mongoKey)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "unable to get mongo template %s", mongoKey)
 	}
 
 	mongoTemplateBodyAsString, ok := mongoTemplateBody.(string)

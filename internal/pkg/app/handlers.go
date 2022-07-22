@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/henomis/mailqueue-go/internal/pkg/auditlogger"
 	"github.com/henomis/mailqueue-go/internal/pkg/email"
+	"github.com/henomis/mailqueue-go/internal/pkg/restmodel"
 )
 
 var whitePixelGIF = []byte{
@@ -14,21 +15,21 @@ var whitePixelGIF = []byte{
 	1, 0, 1, 0, 0, 2, 1, 68, 0, 59,
 }
 
-type queryParameters struct {
-	Sort   string
-	Offset string
-	Limit  string
-	Filter string
-}
+// type queryParameters struct {
+// 	Sort   string
+// 	Offset string
+// 	Limit  string
+// 	Filter string
+// }
 
-func getSortSkipLimitAndFilter(c *fiber.Ctx) *queryParameters {
-	return &queryParameters{
-		Sort:   c.Query("sort"),
-		Offset: c.Query("offset"),
-		Limit:  c.Query("limit"),
-		Filter: c.Query("filter"),
-	}
-}
+// func getSortSkipLimitAndFilter(c *fiber.Ctx) *queryParameters {
+// 	return &queryParameters{
+// 		Sort:   c.Query("sort"),
+// 		Offset: c.Query("offset"),
+// 		Limit:  c.Query("limit"),
+// 		Filter: c.Query("filter"),
+// 	}
+// }
 
 func (a *App) authenticationAndAuthorizationMiddleware(c *fiber.Ctx) error {
 
@@ -77,25 +78,45 @@ func (a *App) setEmailAsRead(c *fiber.Ctx) error {
 
 func (a *App) enqueueEmail(c *fiber.Ctx) error {
 
-	e := email.Email{}
-	if err := c.BodyParser(&e); err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	var emailToEnqueue restmodel.Email
+	if err := c.BodyParser(&emailToEnqueue); err != nil {
+		return c.JSON(
+			&restmodel.Response{
+				Status: fiber.StatusBadRequest,
+				Error:  err.Error(),
+			},
+		)
 	}
 
-	id, err := a.Queue.Enqueue(&e)
+	id, err := a.Queue.Enqueue(emailToEnqueue.ToStorageEmail())
 	if err != nil {
 		a.AuditLogger.Log(auditlogger.Error, "enqueueEmail: %s", err.Error())
-		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+		return c.JSON(
+			&restmodel.Response{
+				Status: fiber.StatusInternalServerError,
+				Error:  err.Error(),
+			},
+		)
 	}
 	a.AuditLogger.Log(auditlogger.Info, "enqueueEmail: %s", id)
 
 	err = a.Queue.SetStatus(id, email.StatusQueued)
 	if err != nil {
 		a.AuditLogger.Log(auditlogger.Error, "enqueueEmail: %s", err.Error())
-		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+		return c.JSON(
+			&restmodel.Response{
+				Status: fiber.StatusInternalServerError,
+				Error:  err.Error(),
+			},
+		)
 	}
 
-	return c.JSON(id)
+	return c.JSON(
+		&restmodel.Response{
+			Status: fiber.StatusOK,
+			Data:   &restmodel.EmailID{ID: id},
+		},
+	)
 }
 
 func (a *App) getLog(c *fiber.Ctx) error {
@@ -137,12 +158,12 @@ func (a *App) template(c *fiber.Ctx) error {
 	return nil
 }
 
-func (a *App) getTemplate(c *fiber.Ctx) error {
+// func (a *App) getTemplate(c *fiber.Ctx) error {
 
-	name := c.Params("uuid")
-	if len(name) > 0 {
+// 	name := c.Params("uuid")
+// 	if len(name) > 0 {
 
-	}
+// 	}
 
-	return nil
-}
+// 	return nil
+// }

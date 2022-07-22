@@ -89,7 +89,11 @@ func (s *MailYakClient) Send(email *email.Email) error {
 
 	}
 
-	s.mailyakInstance.HTML().Set(email.Data)
+	if len(email.HTML) > 0 {
+		s.mailyakInstance.HTML().Set(email.HTML)
+	} else {
+		s.mailyakInstance.HTML().Set(email.Data)
+	}
 
 	return s.mailyakInstance.Send()
 
