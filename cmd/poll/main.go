@@ -37,6 +37,7 @@ func main() {
 			Timeout:    mongoTimeoutAsDuration,
 		},
 		fixedWindowLiminter,
+		nil,
 	)
 	if err != nil {
 		panic(err)

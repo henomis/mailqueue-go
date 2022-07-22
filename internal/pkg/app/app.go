@@ -44,24 +44,24 @@ func NewApp(opt Options) (*App, error) {
 
 //RunAPI the app
 func (a *App) RunAPI(address string) error {
-	a.Server.Get("/img/mail/:uuid", a.readEmail)
 
+	a.Server.Get("/api/v1/images/mail/:service/:id", a.setEmailAsRead)
 	a.Server.Use("/api/v1", a.authenticationAndAuthorizationMiddleware)
 
 	// viene chiamata dal backend per accodare un'email
 	a.Server.Post("/api/v1/mail", a.enqueueEmail)
 	// viene chiamata dal frontend per recuperare i dettagli di un email
 	//a.Server.Get("/api/v1/mail", a.getEmailAll)
-	a.Server.Get("/api/v1/mail/:uuid", a.getEmail)
+	a.Server.Get("/api/v1/mail/:id", a.getEmail)
 
 	a.Server.Get("/api/v1/log", a.getLog)
-	a.Server.Get("/api/v1/log/:uuid", a.getLog)
+	a.Server.Get("/api/v1/log/:id", a.getLog)
 
 	a.Server.Get("/api/v1/template", a.template)
 	a.Server.Get("/api/v1/template/:id", a.template)
 	a.Server.Put("/api/v1/template/:id", a.template)
 	a.Server.Post("/api/v1/template", a.template)
-	a.Server.Delete("/api/v1/emplate/:id", a.template)
+	a.Server.Delete("/api/v1/template/:id", a.template)
 
 	return a.Server.Listen(address)
 }

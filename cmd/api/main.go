@@ -29,7 +29,7 @@ func main() {
 
 	bindAddress := os.Getenv("BIND_ADDRESS")
 
-	tmpl, err := mongorender.New(
+	mongorender, err := mongorender.New(
 		&mongorender.MongoRenderOptions{
 			Endpoint:   mongoEndpoint,
 			Database:   mongoDatabase,
@@ -40,7 +40,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	_ = tmpl
 
 	queue, err := mongoemailqueue.New(
 		&mongoemailqueue.MongoEmailQueueOptions{
@@ -51,6 +50,7 @@ func main() {
 			Timeout:    mongoTimeoutAsDuration,
 		},
 		nil,
+		mongorender,
 	)
 	if err != nil {
 		panic(err)

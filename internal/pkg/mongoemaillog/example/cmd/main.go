@@ -33,7 +33,7 @@ func main() {
 			&email.Log{
 				ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 				Service:   "test",
-				Timestmap: time.Now().Unix(),
+				Timestmap: time.Now().UTC(),
 				EmailID:   "test",
 				Status:    1,
 				Error:     "test",

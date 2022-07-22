@@ -1,6 +1,8 @@
 package app
 
 import (
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/henomis/mailqueue-go/internal/pkg/auditlogger"
 	"github.com/henomis/mailqueue-go/internal/pkg/email"
@@ -35,14 +37,34 @@ func (a *App) authenticationAndAuthorizationMiddleware(c *fiber.Ctx) error {
 	return c.Next()
 }
 
-func (a *App) readEmail(c *fiber.Ctx) error {
+func (a *App) setEmailAsRead(c *fiber.Ctx) error {
 
 	id := c.Params("id")
 	if len(id) == 0 {
 		return c.Status(fiber.StatusBadRequest).SendString("id is required")
 	}
 
-	a.Queue.SetStatus(id, email.StatusRead)
+	service := c.Params("service")
+	if len(service) == 0 {
+		return c.Status(fiber.StatusBadRequest).SendString("service is required")
+	}
+
+	err := a.Queue.SetStatus(id, email.StatusRead)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
+
+	_, err = a.Log.Log(
+		&email.Log{
+			Timestmap: time.Now().UTC(),
+			Service:   service,
+			EmailID:   id,
+			Status:    email.StatusRead,
+		},
+	)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
 
 	c.Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	c.Set("Content-Type", "image/gif")
@@ -57,17 +79,21 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 
 	e := email.Email{}
 	if err := c.BodyParser(&e); err != nil {
-		return err
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
 	id, err := a.Queue.Enqueue(&e)
 	if err != nil {
 		a.AuditLogger.Log(auditlogger.Error, "enqueueEmail: %s", err.Error())
-		return c.Status(400).SendString(err.Error())
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
-
 	a.AuditLogger.Log(auditlogger.Info, "enqueueEmail: %s", id)
-	a.Queue.SetStatus(id, email.StatusQueued)
+
+	err = a.Queue.SetStatus(id, email.StatusQueued)
+	if err != nil {
+		a.AuditLogger.Log(auditlogger.Error, "enqueueEmail: %s", err.Error())
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
 
 	return c.JSON(id)
 }

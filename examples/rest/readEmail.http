@@ -1,0 +1,1 @@
+GET http://localhost:8080/api/v1/images/mail/myservice/f4ce17bd-e6ce-4bdc-aca9-c43eb80633ed HTTP/1.1

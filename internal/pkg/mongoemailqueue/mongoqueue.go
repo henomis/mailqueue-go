@@ -1,12 +1,16 @@
 package mongoemailqueue
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"strings"
 	"time"
 
 	"github.com/henomis/mailqueue-go/internal/pkg/email"
 	"github.com/henomis/mailqueue-go/internal/pkg/limiter"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongostorage"
+	"github.com/henomis/mailqueue-go/internal/pkg/render"
 	"github.com/pkg/errors"
 )
 
@@ -22,9 +26,10 @@ type MongoEmailQueue struct {
 	mongoQueueOptions *MongoEmailQueueOptions
 	limiter           limiter.Limiter
 	mongoStorage      *mongostorage.MongoStorage
+	render            render.Render
 }
 
-func New(mongoQueueOptions *MongoEmailQueueOptions, limiter limiter.Limiter) (*MongoEmailQueue, error) {
+func New(mongoQueueOptions *MongoEmailQueueOptions, limiter limiter.Limiter, render render.Render) (*MongoEmailQueue, error) {
 
 	err := validateMongoQueueOptions(mongoQueueOptions)
 	if err != nil {
@@ -56,12 +61,26 @@ func New(mongoQueueOptions *MongoEmailQueueOptions, limiter limiter.Limiter) (*M
 		mongoQueueOptions: mongoQueueOptions,
 		limiter:           limiter,
 		mongoStorage:      mongoStorage,
+		render:            render,
 	}
 
 	return mongoQueue, nil
 }
 
 func (q *MongoEmailQueue) Enqueue(email *email.Email) (string, error) {
+
+	email.ID = mongostorage.RandomID()
+
+	if len(email.Template) > 0 && q.render != nil {
+
+		var buffer bytes.Buffer
+		err := q.render.Execute(strings.NewReader(email.Data), io.Writer(&buffer), email.Template)
+		if err != nil {
+			return "", errors.Wrap(err, "unable to render email")
+		}
+
+		email.HTML = buffer.String()
+	}
 
 	id, err := q.mongoStorage.InsertOne(email)
 	if err != nil {

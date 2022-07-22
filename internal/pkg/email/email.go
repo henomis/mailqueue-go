@@ -4,8 +4,9 @@ package email
 type Status int
 
 const (
+	StatusUnknown = iota
 	//StatusQueued email inserita in coda
-	StatusQueued = iota
+	StatusQueued
 	//StatusDequeued email prelevata dalla coda grazie al limitatore
 	StatusDequeued
 	//StatusSending email in carico al client SMTP
@@ -36,7 +37,7 @@ type Email struct {
 	Template    string       `json:"template" bson:"template"`
 	Attachments []Attachment `json:"attachments" bson:"attachments"`
 	Sent        bool         `json:"sent" bson:"sent"`
-	Status      int          `json:"status" bson:"status"`
+	Status      uint64       `json:"status" bson:"status"`
 }
 
 //Attachment struct

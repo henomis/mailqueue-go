@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -267,6 +268,10 @@ func Query(query string) MongoQuery {
 
 func Queryf(query string, args ...interface{}) MongoQuery {
 	return Query(fmt.Sprintf(query, args...))
+}
+
+func RandomID() string {
+	return uuid.New().String()
 }
 
 // ---------------
