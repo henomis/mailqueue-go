@@ -69,6 +69,8 @@ func main() {
 		},
 	)
 
+	// smtpClient := mocksmtpclient.New(3)
+
 	opt := app.Options{
 		Queue:       queue,
 		Log:         log,
