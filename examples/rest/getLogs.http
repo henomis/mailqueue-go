@@ -1,0 +1,1 @@
+GET http://localhost:8080/api/v1/log/7cc2d2e5-defb-4ddf-b01b-df0d73b004e9 HTTP/1.1
