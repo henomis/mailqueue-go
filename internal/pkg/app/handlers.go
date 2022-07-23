@@ -50,12 +50,12 @@ func (a *App) setEmailAsRead(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString("service is required")
 	}
 
-	err := a.Queue.SetStatus(id, email.StatusRead)
+	err := a.emailQueue.SetStatus(id, email.StatusRead)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
-	_, err = a.Log.Log(
+	_, err = a.emailLog.Log(
 		&email.Log{
 			Timestmap: time.Now().UTC(),
 			Service:   service,
@@ -88,7 +88,7 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 		)
 	}
 
-	id, err := a.Queue.Enqueue(emailToEnqueue.ToStorageEmail())
+	id, err := a.emailQueue.Enqueue(emailToEnqueue.ToStorageEmail())
 	if err != nil {
 		audit.Log(audit.Error, "enqueueEmail: %s", err.Error())
 		return c.JSON(
@@ -100,7 +100,7 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 	}
 	audit.Log(audit.Info, "enqueueEmail: %s", id)
 
-	err = a.Queue.SetStatus(id, email.StatusQueued)
+	err = a.emailQueue.SetStatus(id, email.StatusQueued)
 	if err != nil {
 		audit.Log(audit.Error, "enqueueEmail: %s", err.Error())
 		return c.JSON(
@@ -110,7 +110,7 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 			},
 		)
 	}
-	_, err = a.Log.Log(
+	_, err = a.emailLog.Log(
 		&email.Log{
 			Timestmap: time.Now().UTC(),
 			Service:   emailToEnqueue.Service,
@@ -137,7 +137,7 @@ func (a *App) getLog(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).SendString("id is required")
 	}
 
-	l, err := a.Log.Items(id)
+	l, err := a.emailLog.Items(id)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}

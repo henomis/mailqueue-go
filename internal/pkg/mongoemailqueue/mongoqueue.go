@@ -93,7 +93,7 @@ func (q *MongoEmailQueue) Enqueue(email *email.Email) (string, error) {
 
 func (q *MongoEmailQueue) Dequeue() (*email.Email, error) {
 
-	filterQuery := mongostorage.Query(`{"sent": false}`)
+	filterQuery := mongostorage.Query(`{"processed": false}`)
 	err := q.mongoStorage.WaitCappedCollectionCursor(filterQuery)
 	if err != nil {
 		return nil, errors.Wrap(err, "error waiting for capped collection cursor")
@@ -114,7 +114,7 @@ func (q *MongoEmailQueue) Dequeue() (*email.Email, error) {
 func (q *MongoEmailQueue) SetProcessed(id string) error {
 
 	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, id)
-	updateQuery := mongostorage.Query(`{"$set": {"sent": true}}`)
+	updateQuery := mongostorage.Query(`{"$set": {"processed": true}}`)
 
 	err := q.mongoStorage.Update(filterQuery, updateQuery)
 	if err != nil {

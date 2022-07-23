@@ -33,7 +33,7 @@ type Email struct {
 	Data        string      `json:"data" bson:"data"`
 	Template    string      `json:"template" bson:"template"`
 	Attachments Attachments `json:"attachments" bson:"attachments"`
-	Sent        bool        `json:"sent" bson:"sent"`
+	Processed   bool        `json:"processed" bson:"processed"`
 	Status      uint64      `json:"status" bson:"status"`
 }
 

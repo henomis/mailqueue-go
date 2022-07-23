@@ -114,7 +114,7 @@ func main() {
 			Data:        "data",
 			Attachments: []email.Attachment{},
 			Template:    "template",
-			Sent:        false,
+			Processed:   false,
 			Status:      email.StatusQueued,
 		}))
 		time.Sleep(1 * time.Millisecond)

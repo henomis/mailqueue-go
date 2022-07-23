@@ -69,13 +69,13 @@ func main() {
 
 	// smtpClient := mocksmtpclient.New(3)
 
-	opt := app.Options{
-		Queue: queue,
-		Log:   log,
-		SMTP:  smtpClient,
+	appOptions := app.AppOptions{
+		EmailQueue: queue,
+		EmailLog:   log,
+		SMTPClient: smtpClient,
 	}
 
-	poll, err := app.New(opt)
+	poll, err := app.New(appOptions)
 	if err != nil {
 		panic(err)
 	}

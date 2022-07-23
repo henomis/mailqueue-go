@@ -78,13 +78,13 @@ func main() {
 		Expiration: 1 * time.Minute,
 	}))
 
-	opt := app.Options{
-		Log:    mongoEmailLog,
-		Queue:  mongoEmailQueue,
-		Server: httpServer,
+	appOptions := app.AppOptions{
+		EmailLog:   mongoEmailLog,
+		EmailQueue: mongoEmailQueue,
+		HTTPServer: httpServer,
 	}
 
-	server, err := app.New(opt)
+	server, err := app.New(appOptions)
 	if err != nil {
 		panic(err)
 	}
