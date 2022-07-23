@@ -106,11 +106,8 @@ func main() {
 		fmt.Println(q.Enqueue(&email.Email{
 			ID:          fmt.Sprintf("%d-%d", time.Now().UnixNano(), i),
 			Service:     "service",
-			From:        "pippo@example.com",
 			To:          "no-reply@example.com",
 			Subject:     "subject",
-			FromName:    "Pippo",
-			ReplyTo:     "reply-to@example.com",
 			Cc:          "cc",
 			Bcc:         "bcc",
 			HTML:        "<h1>Hello</h1>",

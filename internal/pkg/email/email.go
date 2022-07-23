@@ -25,9 +25,6 @@ const (
 type Email struct {
 	ID          string      `json:"uuid" bson:"_id"`
 	Service     string      `json:"service" bson:"service"`
-	From        string      `json:"from" bson:"from"`
-	FromName    string      `json:"fromname" bson:"fromname"`
-	ReplyTo     string      `json:"replyto" bson:"replyto"`
 	To          string      `json:"to" bson:"to"`
 	Cc          string      `json:"cc" bson:"cc"`
 	Bcc         string      `json:"bcc" bson:"bcc"`
