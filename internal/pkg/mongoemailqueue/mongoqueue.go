@@ -129,6 +129,10 @@ func (q *MongoEmailQueue) SetStatus(id string, status email.Status) error {
 	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, id)
 	updateQuery := mongostorage.Queryf(`{"$set": {"status": %d}}`, status)
 
+	if status == email.StatusRead {
+		filterQuery = mongostorage.Queryf(`{"_id": "%s", "status": {"$in": [%d,%d]}}`, id, email.StatusSent, email.StatusRead)
+	}
+
 	err := q.mongoStorage.Update(filterQuery, updateQuery)
 	if err != nil {
 		return errors.Wrap(err, "unable to update data")

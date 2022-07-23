@@ -239,6 +239,7 @@ func (ms *MongoStorage) waitCursor(filterQuery MongoQuery) error {
 			//empty collection
 			// log.Println("empty collection")
 			time.Sleep(1 * time.Second)
+			ms.mongoCursor = nil
 			ms.setupTailableAwaitCursor(filterQuery)
 			continue
 		} else if err := ms.mongoCursor.Err(); err != nil {

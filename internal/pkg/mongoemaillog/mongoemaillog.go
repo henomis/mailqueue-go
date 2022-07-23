@@ -58,6 +58,9 @@ func New(mongoEmailLogOptions *MongoEmailLogOptions) (*MongoEmailLog, error) {
 
 func (mel *MongoEmailLog) Log(log *email.Log) (string, error) {
 
+	log.ID = mongostorage.RandomID()
+	log.Timestmap = time.Now().UTC()
+
 	id, err := mel.mongoStorage.InsertOne(log)
 	if err != nil {
 		return "", errors.Wrap(err, "unable to insert data")

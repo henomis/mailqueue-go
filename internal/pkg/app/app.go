@@ -12,11 +12,11 @@ import (
 
 //App struct
 type App struct {
-	Queue       *mongoemailqueue.MongoEmailQueue
-	Log         *mongoemaillog.MongoEmailLog
-	SMTP        sendmail.Client
-	Server      *fiber.App
-	AuditLogger auditlogger.AuditLogger
+	Queue  *mongoemailqueue.MongoEmailQueue
+	Log    *mongoemaillog.MongoEmailLog
+	SMTP   sendmail.Client
+	Server *fiber.App
+	Audit  auditlogger.AuditLogger
 }
 
 //Options for App
@@ -28,15 +28,15 @@ type Options struct {
 	Server      *fiber.App
 }
 
-//NewApp Creates a new app instance
-func NewApp(opt Options) (*App, error) {
+//New Creates a new app instance
+func New(opt Options) (*App, error) {
 
 	app := &App{
-		Server:      opt.Server,
-		SMTP:        opt.SMTP,
-		Queue:       opt.Queue,
-		Log:         opt.Log,
-		AuditLogger: opt.AuditLogger,
+		Server: opt.Server,
+		SMTP:   opt.SMTP,
+		Queue:  opt.Queue,
+		Log:    opt.Log,
+		Audit:  opt.AuditLogger,
 	}
 
 	return app, nil
@@ -68,56 +68,90 @@ func (a *App) RunAPI(address string) error {
 
 //RunPoll func
 func (a *App) RunPoll() error {
-
 	for {
-
-		dequeuedEmail, err := a.Queue.Dequeue()
+		err := a.pollEmail()
 		if err != nil {
-			a.AuditLogger.Log(auditlogger.Error, "Dequeue: %s", err.Error())
 			return err
 		}
+	}
+}
 
-		a.AuditLogger.Log(auditlogger.Info, "Dequeued: %s", string(dequeuedEmail.ID))
+func (a *App) pollEmail() error {
 
-		entry := &email.Log{
+	dequeuedEmail, err := a.Queue.Dequeue()
+	if err != nil {
+		a.Audit.Log(auditlogger.Error, "Queue.Dequeue: %s", err.Error())
+		return err
+	}
+
+	a.Audit.Log(auditlogger.Info, "Queue.Dequeue: %s", string(dequeuedEmail.ID))
+
+	_, err = a.Log.Log(
+		&email.Log{
 			Service: dequeuedEmail.Service,
 			Status:  email.StatusDequeued,
 			EmailID: dequeuedEmail.ID,
+		},
+	)
+	if err != nil {
+		a.Audit.Log(auditlogger.Warning, "Log: %s", err.Error())
+	}
+
+	for attempt := 0; attempt < a.SMTP.Attempts(); attempt++ {
+		err = a.sendEmail(dequeuedEmail)
+		if err == nil {
+			break
 		}
-		a.Log.Log(entry)
+	}
 
-		for attempt := 0; attempt < a.SMTP.Attempts(); attempt++ {
-
-			a.AuditLogger.Log(auditlogger.Info, "Sending: %s", string(dequeuedEmail.ID))
-
-			entry.Status = email.StatusSending
-			entry.Error = ""
-			a.Log.Log(entry)
-			err = a.SMTP.Send(dequeuedEmail)
-
-			if err == nil {
-				a.AuditLogger.Log(auditlogger.Info, "Send: sent %s", string(dequeuedEmail.ID))
-				a.Queue.SetProcessed(dequeuedEmail.ID)
-				entry.Status = email.StatusSent
-				a.Log.Log(entry)
-				break
-			}
-
-			a.AuditLogger.Log(auditlogger.Warning, "Send: %s, %s", string(dequeuedEmail.ID), err.Error())
-			entry.Status = email.StatusErrorSending
-			entry.Error = err.Error()
-			a.Log.Log(entry)
-
+	if err != nil {
+		a.Audit.Log(auditlogger.Error, "Canceled: %s", err.Error())
+		errSetProcess := a.Queue.SetProcessed(dequeuedEmail.ID)
+		if errSetProcess != nil {
+			a.Audit.Log(auditlogger.Error, "Queue.SetProcessed: %s", err.Error())
 		}
+		a.insertLog(dequeuedEmail.ID, dequeuedEmail.Service, err.Error(), email.StatusErrorCanceled)
+	}
 
-		if err != nil {
-			a.AuditLogger.Log(auditlogger.Error, "Canceled: %s", err.Error())
-			a.Queue.SetProcessed(dequeuedEmail.ID)
-			entry.Status = email.StatusErrorCanceled
-			entry.Error = err.Error()
-			a.Log.Log(entry)
-		}
+	return nil
+}
 
+func (a *App) sendEmail(dequeuedEmail *email.Email) error {
+
+	a.Audit.Log(auditlogger.Info, "Sending: %s", string(dequeuedEmail.ID))
+	a.insertLog(dequeuedEmail.ID, dequeuedEmail.Service, "", email.StatusSending)
+
+	err := a.SMTP.Send(dequeuedEmail)
+	if err != nil {
+		a.Audit.Log(auditlogger.Warning, "Send: %s, %s", string(dequeuedEmail.ID), err.Error())
+		a.insertLog(dequeuedEmail.ID, dequeuedEmail.Service, err.Error(), email.StatusErrorSending)
+		return err
+	}
+
+	a.Audit.Log(auditlogger.Info, "Send: sent %s", string(dequeuedEmail.ID))
+
+	err = a.Queue.SetProcessed(dequeuedEmail.ID)
+	if err != nil {
+		a.Audit.Log(auditlogger.Error, "Queue.SetProcessed: %s", err.Error())
+	}
+
+	a.insertLog(dequeuedEmail.ID, dequeuedEmail.Service, "", email.StatusSent)
+
+	return nil
+}
+
+func (a *App) insertLog(emailID, service, errorMessage string, status int) {
+
+	_, err := a.Log.Log(
+		&email.Log{
+			Service: service,
+			Status:  status,
+			EmailID: emailID,
+			Error:   errorMessage,
+		},
+	)
+	if err != nil {
+		a.Audit.Log(auditlogger.Warning, "Log: %s", err.Error())
 	}
 }
 

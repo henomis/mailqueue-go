@@ -70,7 +70,7 @@ func (a *App) setEmailAsRead(c *fiber.Ctx) error {
 	c.Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	c.Set("Content-Type", "image/gif")
 
-	a.AuditLogger.Log(auditlogger.Info, "readEmail: %s", id)
+	a.Audit.Log(auditlogger.Info, "readEmail: %s", id)
 
 	return c.Send(whitePixelGIF)
 
@@ -90,7 +90,7 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 
 	id, err := a.Queue.Enqueue(emailToEnqueue.ToStorageEmail())
 	if err != nil {
-		a.AuditLogger.Log(auditlogger.Error, "enqueueEmail: %s", err.Error())
+		a.Audit.Log(auditlogger.Error, "enqueueEmail: %s", err.Error())
 		return c.JSON(
 			&restmodel.Response{
 				Status: fiber.StatusInternalServerError,
@@ -98,17 +98,28 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 			},
 		)
 	}
-	a.AuditLogger.Log(auditlogger.Info, "enqueueEmail: %s", id)
+	a.Audit.Log(auditlogger.Info, "enqueueEmail: %s", id)
 
 	err = a.Queue.SetStatus(id, email.StatusQueued)
 	if err != nil {
-		a.AuditLogger.Log(auditlogger.Error, "enqueueEmail: %s", err.Error())
+		a.Audit.Log(auditlogger.Error, "enqueueEmail: %s", err.Error())
 		return c.JSON(
 			&restmodel.Response{
 				Status: fiber.StatusInternalServerError,
 				Error:  err.Error(),
 			},
 		)
+	}
+	_, err = a.Log.Log(
+		&email.Log{
+			Timestmap: time.Now().UTC(),
+			Service:   emailToEnqueue.Service,
+			EmailID:   id,
+			Status:    email.StatusQueued,
+		},
+	)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
 	}
 
 	return c.JSON(

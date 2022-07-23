@@ -41,7 +41,7 @@ func main() {
 		panic(err)
 	}
 
-	queue, err := mongoemailqueue.New(
+	mongoEmailQueue, err := mongoemailqueue.New(
 		&mongoemailqueue.MongoEmailQueueOptions{
 			Endpoint:   mongoEndpoint,
 			Database:   mongoDatabase,
@@ -55,7 +55,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	log, err := mongoemaillog.New(
+	mongoEmailLog, err := mongoemaillog.New(
 		&mongoemaillog.MongoEmailLogOptions{
 			Endpoint:   mongoEndpoint,
 			Database:   mongoDatabase,
@@ -68,26 +68,26 @@ func main() {
 		panic(err)
 	}
 
-	t := fileauditlogger.NewFileAuditLogger(os.Stdout)
+	audit := fileauditlogger.New(os.Stdout, auditlogger.Error)
 
-	f := fiber.New(fiber.Config{
+	httpServer := fiber.New(fiber.Config{
 		StrictRouting: true,
 	})
-	f.Use(logger.New())
-	f.Use(cors.New())
-	f.Use(flimiter.New(flimiter.Config{
+	httpServer.Use(logger.New())
+	httpServer.Use(cors.New())
+	httpServer.Use(flimiter.New(flimiter.Config{
 		Max:        200,
 		Expiration: 1 * time.Minute,
 	}))
 
 	opt := app.Options{
-		Log:         log,
-		Queue:       queue,
-		AuditLogger: t,
-		Server:      f,
+		Log:         mongoEmailLog,
+		Queue:       mongoEmailQueue,
+		AuditLogger: audit,
+		Server:      httpServer,
 	}
 
-	server, err := app.NewApp(opt)
+	server, err := app.New(opt)
 	if err != nil {
 		panic(err)
 	}
@@ -95,7 +95,7 @@ func main() {
 
 	err = server.RunAPI(bindAddress)
 	if err != nil {
-		t.Log(auditlogger.Error, "RunAPI: %s", err.Error())
+		audit.Log(auditlogger.Error, "RunAPI: %s", err.Error())
 	}
 
 }
