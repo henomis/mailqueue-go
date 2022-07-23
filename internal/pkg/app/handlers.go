@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -42,29 +43,29 @@ func (a *App) setEmailAsRead(c *fiber.Ctx) error {
 
 	id := c.Params("id")
 	if len(id) == 0 {
-		return c.Status(fiber.StatusBadRequest).SendString("id is required")
+		return jsonError(c, "validate params", fiber.StatusBadRequest, fmt.Errorf("invalid id"))
 	}
 
 	service := c.Params("service")
 	if len(service) == 0 {
-		return c.Status(fiber.StatusBadRequest).SendString("service is required")
+		return jsonError(c, "validate params", fiber.StatusBadRequest, fmt.Errorf("invalid service"))
 	}
 
 	err := a.emailQueue.SetStatus(id, email.StatusRead)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+		return jsonError(c, "emailQueue.SetStatus", fiber.StatusInternalServerError, err)
 	}
 
 	_, err = a.emailLog.Log(
 		&email.Log{
-			Timestmap: time.Now().UTC(),
+			Timestamp: time.Now().UTC(),
 			Service:   service,
 			EmailID:   id,
 			Status:    email.StatusRead,
 		},
 	)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+		return jsonError(c, "emailLog.Log", fiber.StatusInternalServerError, err)
 	}
 
 	c.Set("Cache-Control", "no-cache, no-store, must-revalidate")
@@ -80,46 +81,29 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 
 	var emailToEnqueue restmodel.Email
 	if err := c.BodyParser(&emailToEnqueue); err != nil {
-		return c.JSON(
-			&restmodel.Response{
-				Status: fiber.StatusBadRequest,
-				Error:  err.Error(),
-			},
-		)
+		return jsonError(c, "bodyParser", fiber.StatusBadRequest, err)
 	}
 
 	id, err := a.emailQueue.Enqueue(emailToEnqueue.ToStorageEmail())
 	if err != nil {
-		audit.Log(audit.Error, "enqueueEmail: %s", err.Error())
-		return c.JSON(
-			&restmodel.Response{
-				Status: fiber.StatusInternalServerError,
-				Error:  err.Error(),
-			},
-		)
+		return jsonError(c, "emailQueue.Enqueue", fiber.StatusInternalServerError, err)
 	}
-	audit.Log(audit.Info, "enqueueEmail: %s", id)
+	audit.Log(audit.Info, "emailQueue.Enqueue: %s", id)
 
 	err = a.emailQueue.SetStatus(id, email.StatusQueued)
 	if err != nil {
-		audit.Log(audit.Error, "enqueueEmail: %s", err.Error())
-		return c.JSON(
-			&restmodel.Response{
-				Status: fiber.StatusInternalServerError,
-				Error:  err.Error(),
-			},
-		)
+		return jsonError(c, "emailQueue.SetStatus", fiber.StatusInternalServerError, err)
 	}
 	_, err = a.emailLog.Log(
 		&email.Log{
-			Timestmap: time.Now().UTC(),
+			Timestamp: time.Now().UTC(),
 			Service:   emailToEnqueue.Service,
 			EmailID:   id,
 			Status:    email.StatusQueued,
 		},
 	)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+		return jsonError(c, "emailLog.Log", fiber.StatusInternalServerError, err)
 	}
 
 	return c.JSON(
@@ -132,17 +116,25 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 
 func (a *App) getLog(c *fiber.Ctx) error {
 
-	id := c.Params("id")
+	id := c.Params("email_id")
 	if len(id) == 0 {
-		return c.Status(fiber.StatusBadRequest).SendString("id is required")
+		return jsonError(c, "validate params", fiber.StatusBadRequest, fmt.Errorf("invalid email_id"))
 	}
 
-	l, err := a.emailLog.Items(id)
+	storageLogItems, err := a.emailLog.Items(id)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+		return jsonError(c, "emailLog.Items", fiber.StatusInternalServerError, err)
 	}
 
-	return c.JSON(l)
+	var logItems restmodel.LogItems
+	logItems.FromStorage(storageLogItems)
+
+	return c.JSON(
+		&restmodel.Response{
+			Status: fiber.StatusOK,
+			Data:   &logItems,
+		},
+	)
 }
 
 func (a *App) getEmail(c *fiber.Ctx) error {
@@ -178,3 +170,13 @@ func (a *App) template(c *fiber.Ctx) error {
 
 // 	return nil
 // }
+
+func jsonError(c *fiber.Ctx, message string, status int, err error) error {
+	audit.Log(audit.Error, "%s: %s", message, err.Error())
+	return c.JSON(
+		&restmodel.Response{
+			Status: status,
+			Error:  err.Error(),
+		},
+	)
+}

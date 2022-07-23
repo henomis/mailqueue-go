@@ -15,6 +15,7 @@ import (
 )
 
 type MongoQuery bson.M
+type MongoFindOptions *options.FindOptions
 
 type MongoStorage struct {
 	timeout         time.Duration
@@ -156,11 +157,11 @@ func (ms *MongoStorage) Decode(data interface{}) error {
 	return nil
 }
 
-func (ms *MongoStorage) DecodeAll(filterQuery MongoQuery, data interface{}) error {
+func (ms *MongoStorage) DecodeAll(filterQuery MongoQuery, sortOptions MongoFindOptions, data interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), ms.timeout)
 	defer cancel()
 
-	cursor, err := ms.mongoCollection.Find(ctx, filterQuery)
+	cursor, err := ms.mongoCollection.Find(ctx, filterQuery, sortOptions)
 	if err != nil {
 		return errors.Wrap(err, "unable to find data")
 	}
@@ -269,6 +270,15 @@ func Query(query string) MongoQuery {
 
 func Queryf(query string, args ...interface{}) MongoQuery {
 	return Query(fmt.Sprintf(query, args...))
+}
+
+func SetSort(opts MongoFindOptions, query MongoQuery) MongoFindOptions {
+	if opts == nil {
+		opts = options.Find()
+	}
+	(*options.FindOptions)(opts).SetSort(query)
+
+	return opts
 }
 
 func RandomID() string {

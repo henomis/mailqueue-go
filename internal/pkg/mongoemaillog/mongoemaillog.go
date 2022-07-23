@@ -59,7 +59,7 @@ func New(mongoEmailLogOptions *MongoEmailLogOptions) (*MongoEmailLog, error) {
 func (mel *MongoEmailLog) Log(log *email.Log) (string, error) {
 
 	log.ID = mongostorage.RandomID()
-	log.Timestmap = time.Now().UTC()
+	log.Timestamp = time.Now().UTC()
 
 	id, err := mel.mongoStorage.InsertOne(log)
 	if err != nil {
@@ -72,9 +72,14 @@ func (mel *MongoEmailLog) Log(log *email.Log) (string, error) {
 func (ml *MongoEmailLog) Items(emailID string) ([]email.Log, error) {
 
 	var logItems []email.Log
+	var sortOptions mongostorage.MongoFindOptions
 
 	filterQuery := mongostorage.Queryf(`{"email_id": "%s"}`, emailID)
-	err := ml.mongoStorage.DecodeAll(filterQuery, &logItems)
+	sortQuery := mongostorage.Queryf(`{"timestamp": 1}`)
+
+	sortOptions = mongostorage.SetSort(sortOptions, sortQuery)
+
+	err := ml.mongoStorage.DecodeAll(filterQuery, sortOptions, &logItems)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to decode data")
 	}
