@@ -10,8 +10,8 @@ import (
 	flimiter "github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/henomis/mailqueue-go/internal/pkg/app"
-	"github.com/henomis/mailqueue-go/internal/pkg/auditlogger"
-	fileauditlogger "github.com/henomis/mailqueue-go/internal/pkg/auditlogger/file"
+	"github.com/henomis/mailqueue-go/internal/pkg/audit"
+
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemailqueue"
 
@@ -68,8 +68,6 @@ func main() {
 		panic(err)
 	}
 
-	audit := fileauditlogger.New(os.Stdout, auditlogger.Error)
-
 	httpServer := fiber.New(fiber.Config{
 		StrictRouting: true,
 	})
@@ -81,10 +79,9 @@ func main() {
 	}))
 
 	opt := app.Options{
-		Log:         mongoEmailLog,
-		Queue:       mongoEmailQueue,
-		AuditLogger: audit,
-		Server:      httpServer,
+		Log:    mongoEmailLog,
+		Queue:  mongoEmailQueue,
+		Server: httpServer,
 	}
 
 	server, err := app.New(opt)
@@ -95,7 +92,7 @@ func main() {
 
 	err = server.RunAPI(bindAddress)
 	if err != nil {
-		audit.Log(auditlogger.Error, "RunAPI: %s", err.Error())
+		audit.Log(audit.Error, "RunAPI: %s", err.Error())
 	}
 
 }

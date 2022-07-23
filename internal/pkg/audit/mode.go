@@ -1,6 +1,8 @@
-package auditlogger
+package audit
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Mode int
 
@@ -10,9 +12,11 @@ const (
 	Error
 )
 
-type AuditLogger interface {
-	Log(Mode, string, ...interface{})
-}
+// type AuditLogger interface {
+// 	Log(Mode, string, ...interface{})
+// 	SetLevel(mode Mode)
+// 	SetOutput(interface{})
+// }
 
 var modeStrings = map[Mode]string{
 	Info:    "INFO",

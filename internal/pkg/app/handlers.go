@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/henomis/mailqueue-go/internal/pkg/auditlogger"
+	"github.com/henomis/mailqueue-go/internal/pkg/audit"
 	"github.com/henomis/mailqueue-go/internal/pkg/email"
 	"github.com/henomis/mailqueue-go/internal/pkg/restmodel"
 )
@@ -70,7 +70,7 @@ func (a *App) setEmailAsRead(c *fiber.Ctx) error {
 	c.Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	c.Set("Content-Type", "image/gif")
 
-	a.Audit.Log(auditlogger.Info, "readEmail: %s", id)
+	audit.Log(audit.Info, "readEmail: %s", id)
 
 	return c.Send(whitePixelGIF)
 
@@ -90,7 +90,7 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 
 	id, err := a.Queue.Enqueue(emailToEnqueue.ToStorageEmail())
 	if err != nil {
-		a.Audit.Log(auditlogger.Error, "enqueueEmail: %s", err.Error())
+		audit.Log(audit.Error, "enqueueEmail: %s", err.Error())
 		return c.JSON(
 			&restmodel.Response{
 				Status: fiber.StatusInternalServerError,
@@ -98,11 +98,11 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 			},
 		)
 	}
-	a.Audit.Log(auditlogger.Info, "enqueueEmail: %s", id)
+	audit.Log(audit.Info, "enqueueEmail: %s", id)
 
 	err = a.Queue.SetStatus(id, email.StatusQueued)
 	if err != nil {
-		a.Audit.Log(auditlogger.Error, "enqueueEmail: %s", err.Error())
+		audit.Log(audit.Error, "enqueueEmail: %s", err.Error())
 		return c.JSON(
 			&restmodel.Response{
 				Status: fiber.StatusInternalServerError,

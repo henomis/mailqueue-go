@@ -3,7 +3,7 @@ package app
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/henomis/mailqueue-go/internal/pkg/auditlogger"
+	"github.com/henomis/mailqueue-go/internal/pkg/audit"
 	"github.com/henomis/mailqueue-go/internal/pkg/email"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemailqueue"
@@ -16,16 +16,14 @@ type App struct {
 	Log    *mongoemaillog.MongoEmailLog
 	SMTP   sendmail.Client
 	Server *fiber.App
-	Audit  auditlogger.AuditLogger
 }
 
 //Options for App
 type Options struct {
-	Queue       *mongoemailqueue.MongoEmailQueue
-	Log         *mongoemaillog.MongoEmailLog
-	AuditLogger auditlogger.AuditLogger
-	SMTP        sendmail.Client
-	Server      *fiber.App
+	Queue  *mongoemailqueue.MongoEmailQueue
+	Log    *mongoemaillog.MongoEmailLog
+	SMTP   sendmail.Client
+	Server *fiber.App
 }
 
 //New Creates a new app instance
@@ -36,7 +34,6 @@ func New(opt Options) (*App, error) {
 		SMTP:   opt.SMTP,
 		Queue:  opt.Queue,
 		Log:    opt.Log,
-		Audit:  opt.AuditLogger,
 	}
 
 	return app, nil
@@ -68,6 +65,7 @@ func (a *App) RunAPI(address string) error {
 
 //RunPoll func
 func (a *App) RunPoll() error {
+	audit.Log(audit.Info, "Starting email queue poll")
 	for {
 		err := a.pollEmail()
 		if err != nil {
@@ -80,11 +78,11 @@ func (a *App) pollEmail() error {
 
 	dequeuedEmail, err := a.Queue.Dequeue()
 	if err != nil {
-		a.Audit.Log(auditlogger.Error, "Queue.Dequeue: %s", err.Error())
+		audit.Log(audit.Error, "Queue.Dequeue: %s", err.Error())
 		return err
 	}
 
-	a.Audit.Log(auditlogger.Info, "Queue.Dequeue: %s", string(dequeuedEmail.ID))
+	audit.Log(audit.Info, "Queue.Dequeue: %s", string(dequeuedEmail.ID))
 
 	_, err = a.Log.Log(
 		&email.Log{
@@ -94,7 +92,7 @@ func (a *App) pollEmail() error {
 		},
 	)
 	if err != nil {
-		a.Audit.Log(auditlogger.Warning, "Log: %s", err.Error())
+		audit.Log(audit.Warning, "Log: %s", err.Error())
 	}
 
 	for attempt := 0; attempt < a.SMTP.Attempts(); attempt++ {
@@ -105,10 +103,10 @@ func (a *App) pollEmail() error {
 	}
 
 	if err != nil {
-		a.Audit.Log(auditlogger.Error, "Canceled: %s", err.Error())
+		audit.Log(audit.Error, "Canceled: %s", err.Error())
 		errSetProcess := a.Queue.SetProcessed(dequeuedEmail.ID)
 		if errSetProcess != nil {
-			a.Audit.Log(auditlogger.Error, "Queue.SetProcessed: %s", err.Error())
+			audit.Log(audit.Error, "Queue.SetProcessed: %s", err.Error())
 		}
 		a.insertLog(dequeuedEmail.ID, dequeuedEmail.Service, err.Error(), email.StatusErrorCanceled)
 	}
@@ -118,21 +116,21 @@ func (a *App) pollEmail() error {
 
 func (a *App) sendEmail(dequeuedEmail *email.Email) error {
 
-	a.Audit.Log(auditlogger.Info, "Sending: %s", string(dequeuedEmail.ID))
+	audit.Log(audit.Info, "Sending: %s", string(dequeuedEmail.ID))
 	a.insertLog(dequeuedEmail.ID, dequeuedEmail.Service, "", email.StatusSending)
 
 	err := a.SMTP.Send(dequeuedEmail)
 	if err != nil {
-		a.Audit.Log(auditlogger.Warning, "Send: %s, %s", string(dequeuedEmail.ID), err.Error())
+		audit.Log(audit.Warning, "Send: %s, %s", string(dequeuedEmail.ID), err.Error())
 		a.insertLog(dequeuedEmail.ID, dequeuedEmail.Service, err.Error(), email.StatusErrorSending)
 		return err
 	}
 
-	a.Audit.Log(auditlogger.Info, "Send: sent %s", string(dequeuedEmail.ID))
+	audit.Log(audit.Info, "Send: sent %s", string(dequeuedEmail.ID))
 
 	err = a.Queue.SetProcessed(dequeuedEmail.ID)
 	if err != nil {
-		a.Audit.Log(auditlogger.Error, "Queue.SetProcessed: %s", err.Error())
+		audit.Log(audit.Error, "Queue.SetProcessed: %s", err.Error())
 	}
 
 	a.insertLog(dequeuedEmail.ID, dequeuedEmail.Service, "", email.StatusSent)
@@ -151,7 +149,7 @@ func (a *App) insertLog(emailID, service, errorMessage string, status int) {
 		},
 	)
 	if err != nil {
-		a.Audit.Log(auditlogger.Warning, "Log: %s", err.Error())
+		audit.Log(audit.Warning, "Log: %s", err.Error())
 	}
 }
 

@@ -6,12 +6,11 @@ import (
 	"time"
 
 	"github.com/henomis/mailqueue-go/internal/pkg/app"
-	"github.com/henomis/mailqueue-go/internal/pkg/auditlogger"
-	fileauditlogger "github.com/henomis/mailqueue-go/internal/pkg/auditlogger/file"
+	"github.com/henomis/mailqueue-go/internal/pkg/audit"
 	"github.com/henomis/mailqueue-go/internal/pkg/limiter"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemailqueue"
-	"github.com/henomis/mailqueue-go/internal/pkg/sendmail/mocksmtpclient"
+	"github.com/henomis/mailqueue-go/internal/pkg/sendmail/mailyakclient"
 )
 
 func main() {
@@ -55,27 +54,25 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	t := fileauditlogger.New(os.Stdout, auditlogger.Info)
 
-	// smtpClient := mailyakclient.New(
-	// 	&mailyakclient.MailYakClientOptions{
-	// 		Server:   os.Getenv("SMTP_SERVER"),
-	// 		Username: os.Getenv("SMTP_USERNAME"),
-	// 		Password: os.Getenv("SMTP_PASSWORD"),
-	// 		From:     os.Getenv("SMTP_FROM"),
-	// 		FromName: os.Getenv("SMTP_FROMNAME"),
-	// 		ReplyTo:  os.Getenv("SMTP_REPLYTO"),
-	// 		Attempts: os.Getenv("SMTP_ATTEMPTS"),
-	// 	},
-	// )
+	smtpClient := mailyakclient.New(
+		&mailyakclient.MailYakClientOptions{
+			Server:   os.Getenv("SMTP_SERVER"),
+			Username: os.Getenv("SMTP_USERNAME"),
+			Password: os.Getenv("SMTP_PASSWORD"),
+			From:     os.Getenv("SMTP_FROM"),
+			FromName: os.Getenv("SMTP_FROMNAME"),
+			ReplyTo:  os.Getenv("SMTP_REPLYTO"),
+			Attempts: os.Getenv("SMTP_ATTEMPTS"),
+		},
+	)
 
-	smtpClient := mocksmtpclient.New(3)
+	// smtpClient := mocksmtpclient.New(3)
 
 	opt := app.Options{
-		Queue:       queue,
-		Log:         log,
-		AuditLogger: t,
-		SMTP:        smtpClient,
+		Queue: queue,
+		Log:   log,
+		SMTP:  smtpClient,
 	}
 
 	poll, err := app.New(opt)
@@ -86,7 +83,7 @@ func main() {
 
 	err = poll.RunPoll()
 	if err != nil {
-		t.Log(auditlogger.Error, "RunPoll: %s", err.Error())
+		audit.Log(audit.Error, "RunPoll: %s", err.Error())
 	}
 
 }
