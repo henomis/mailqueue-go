@@ -7,33 +7,37 @@ import (
 	"github.com/henomis/mailqueue-go/internal/pkg/email"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemailqueue"
+	"github.com/henomis/mailqueue-go/internal/pkg/mongotemplate"
 	"github.com/henomis/mailqueue-go/internal/pkg/sendmail"
 )
 
 //App struct
 type App struct {
-	emailQueue *mongoemailqueue.MongoEmailQueue
-	emailLog   *mongoemaillog.MongoEmailLog
-	smtpClient sendmail.Client
-	httpServer *fiber.App
+	emailQueue    *mongoemailqueue.MongoEmailQueue
+	emailLog      *mongoemaillog.MongoEmailLog
+	mongoTemplate *mongotemplate.MongoTemplate
+	smtpClient    sendmail.Client
+	httpServer    *fiber.App
 }
 
 //AppOptions for App
 type AppOptions struct {
-	EmailQueue *mongoemailqueue.MongoEmailQueue
-	EmailLog   *mongoemaillog.MongoEmailLog
-	SMTPClient sendmail.Client
-	HTTPServer *fiber.App
+	EmailQueue    *mongoemailqueue.MongoEmailQueue
+	EmailLog      *mongoemaillog.MongoEmailLog
+	EmailTemplate *mongotemplate.MongoTemplate
+	SMTPClient    sendmail.Client
+	HTTPServer    *fiber.App
 }
 
 //New Creates a new app instance
 func New(appOptions AppOptions) (*App, error) {
 
 	app := &App{
-		httpServer: appOptions.HTTPServer,
-		smtpClient: appOptions.SMTPClient,
-		emailQueue: appOptions.EmailQueue,
-		emailLog:   appOptions.EmailLog,
+		httpServer:    appOptions.HTTPServer,
+		smtpClient:    appOptions.SMTPClient,
+		emailQueue:    appOptions.EmailQueue,
+		emailLog:      appOptions.EmailLog,
+		mongoTemplate: appOptions.EmailTemplate,
 	}
 
 	return app, nil
@@ -54,11 +58,11 @@ func (a *App) RunAPI(address string) error {
 	a.httpServer.Get("/api/v1/log", a.getLog)
 	a.httpServer.Get("/api/v1/log/:email_id", a.getLog)
 
-	a.httpServer.Get("/api/v1/template", a.template)
-	a.httpServer.Get("/api/v1/template/:id", a.template)
-	a.httpServer.Put("/api/v1/template/:id", a.template)
-	a.httpServer.Post("/api/v1/template", a.template)
-	a.httpServer.Delete("/api/v1/template/:id", a.template)
+	a.httpServer.Get("/api/v1/templates", a.getTemplates)
+	a.httpServer.Get("/api/v1/templates/:id", a.getTemplate)
+	a.httpServer.Put("/api/v1/templates/:id", a.updateTemplate)
+	a.httpServer.Post("/api/v1/templates", a.addTemplate)
+	a.httpServer.Delete("/api/v1/templates/:id", a.deleteTemplate)
 
 	return a.httpServer.Listen(address)
 }

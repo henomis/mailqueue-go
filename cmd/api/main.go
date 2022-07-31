@@ -11,11 +11,10 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/henomis/mailqueue-go/internal/pkg/app"
 	"github.com/henomis/mailqueue-go/internal/pkg/audit"
+	"github.com/henomis/mailqueue-go/internal/pkg/mongotemplate"
 
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemailqueue"
-
-	"github.com/henomis/mailqueue-go/internal/pkg/render/mongorender"
 )
 
 func main() {
@@ -29,8 +28,8 @@ func main() {
 
 	bindAddress := os.Getenv("BIND_ADDRESS")
 
-	mongorender, err := mongorender.New(
-		&mongorender.MongoRenderOptions{
+	mongotemplate, err := mongotemplate.New(
+		&mongotemplate.MongoTemplateOptions{
 			Endpoint:   mongoEndpoint,
 			Database:   mongoDatabase,
 			Collection: "templates",
@@ -50,7 +49,7 @@ func main() {
 			Timeout:    mongoTimeoutAsDuration,
 		},
 		nil,
-		mongorender,
+		mongotemplate,
 	)
 	if err != nil {
 		panic(err)
@@ -79,9 +78,10 @@ func main() {
 	}))
 
 	appOptions := app.AppOptions{
-		EmailLog:   mongoEmailLog,
-		EmailQueue: mongoEmailQueue,
-		HTTPServer: httpServer,
+		EmailLog:      mongoEmailLog,
+		EmailQueue:    mongoEmailQueue,
+		EmailTemplate: mongotemplate,
+		HTTPServer:    httpServer,
 	}
 
 	server, err := app.New(appOptions)

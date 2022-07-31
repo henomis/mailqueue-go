@@ -20,12 +20,12 @@ func (li *LogItems) FromStorage(storageItems []email.Log) {
 
 	for _, storageItem := range storageItems {
 		var logItem LogItem
-		logItem.FromStorage(storageItem)
+		logItem.FromStorage(&storageItem)
 		*li = append(*li, logItem)
 	}
 }
 
-func (li *LogItem) FromStorage(storageItem email.Log) {
+func (li *LogItem) FromStorage(storageItem *email.Log) {
 	li.ID = storageItem.ID
 	li.Service = storageItem.Service
 	li.Timestmap = storageItem.Timestamp

@@ -17,7 +17,7 @@ const (
 func main() {
 
 	render, err := mongorender.New(
-		&mongorender.MongoRenderOptions{
+		&mongorender.MongoTemplateOptions{
 			Endpoint:   "mongodb://localhost:27017",
 			Database:   "test",
 			Collection: "template",

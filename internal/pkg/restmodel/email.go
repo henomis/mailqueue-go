@@ -52,3 +52,7 @@ func (e *Email) ToStorageEmail() *email.Email {
 		Attachments: e.Attachments.ToStorageAttachment(),
 	}
 }
+
+type EmailID struct {
+	ID string `json:"id"`
+}

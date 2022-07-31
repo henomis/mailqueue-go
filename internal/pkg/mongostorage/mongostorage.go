@@ -147,6 +147,22 @@ func (ms *MongoStorage) ReplaceOrInsert(filterQuery MongoQuery, data interface{}
 	return nil
 }
 
+func (ms *MongoStorage) DeleteOne(filterQuery MongoQuery) error {
+	ctx, cancel := context.WithTimeout(context.Background(), ms.timeout)
+	defer cancel()
+
+	result, err := ms.mongoCollection.DeleteOne(ctx, filterQuery)
+	if err != nil {
+		return errors.Wrap(err, "unable to delete data")
+	}
+
+	if result.DeletedCount == 0 {
+		return fmt.Errorf("document not found")
+	}
+
+	return nil
+}
+
 func (ms *MongoStorage) Decode(data interface{}) error {
 
 	err := ms.mongoCursor.Decode(data)
@@ -157,11 +173,11 @@ func (ms *MongoStorage) Decode(data interface{}) error {
 	return nil
 }
 
-func (ms *MongoStorage) DecodeAll(filterQuery MongoQuery, sortOptions MongoFindOptions, data interface{}) error {
+func (ms *MongoStorage) DecodeAll(filterQuery MongoQuery, options MongoFindOptions, data interface{}) error {
 	ctx, cancel := context.WithTimeout(context.Background(), ms.timeout)
 	defer cancel()
 
-	cursor, err := ms.mongoCollection.Find(ctx, filterQuery, sortOptions)
+	cursor, err := ms.mongoCollection.Find(ctx, filterQuery, options)
 	if err != nil {
 		return errors.Wrap(err, "unable to find data")
 	}
@@ -190,6 +206,18 @@ func (ms *MongoStorage) Update(filterQuery MongoQuery, updateQuery interface{}) 
 
 	return nil
 
+}
+
+func (ms *MongoStorage) CountQuery(query MongoQuery) (int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), ms.timeout)
+	defer cancel()
+
+	count, err := ms.mongoCollection.CountDocuments(ctx, query)
+	if err != nil {
+		return 0, errors.Wrap(err, "unable count data")
+	}
+
+	return count, nil
 }
 
 func (ms *MongoStorage) WaitCappedCollectionCursor(filterQuery MongoQuery) error {
@@ -277,6 +305,24 @@ func SetSort(opts MongoFindOptions, query MongoQuery) MongoFindOptions {
 		opts = options.Find()
 	}
 	(*options.FindOptions)(opts).SetSort(query)
+
+	return opts
+}
+
+func SetLimit(opts MongoFindOptions, limit int64) MongoFindOptions {
+	if opts == nil {
+		opts = options.Find()
+	}
+	(*options.FindOptions)(opts).SetLimit(limit)
+
+	return opts
+}
+
+func SetSkip(opts MongoFindOptions, offset int64) MongoFindOptions {
+	if opts == nil {
+		opts = options.Find()
+	}
+	(*options.FindOptions)(opts).SetSkip(offset)
 
 	return opts
 }

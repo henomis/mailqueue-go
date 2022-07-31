@@ -16,7 +16,7 @@ type MongoTemplate struct {
 	Template string `json:"template" bson:"template"`
 }
 
-type MongoRenderOptions struct {
+type MongoTemplateOptions struct {
 	Endpoint   string
 	Database   string
 	Collection string
@@ -24,11 +24,11 @@ type MongoRenderOptions struct {
 }
 
 type MongoRender struct {
-	mongoRenderOptions *MongoRenderOptions
+	mongoRenderOptions *MongoTemplateOptions
 	mongoStorage       *mongostorage.MongoStorage
 }
 
-func New(mongoRenderOptions *MongoRenderOptions) (*MongoRender, error) {
+func New(mongoRenderOptions *MongoTemplateOptions) (*MongoRender, error) {
 	err := validateMongoRenderOptions(mongoRenderOptions)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid mongo email log options")
@@ -122,7 +122,7 @@ func (mr *MongoRender) Execute(inputDataReader io.Reader, outputDataWriter io.Wr
 // Support methods
 // ---------------
 
-func validateMongoRenderOptions(mongoRenderOptions *MongoRenderOptions) error {
+func validateMongoRenderOptions(mongoRenderOptions *MongoTemplateOptions) error {
 
 	if len(mongoRenderOptions.Endpoint) == 0 {
 		return fmt.Errorf("invalid endpoint")
