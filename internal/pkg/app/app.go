@@ -4,11 +4,11 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/henomis/mailqueue-go/internal/pkg/audit"
-	"github.com/henomis/mailqueue-go/internal/pkg/email"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemailqueue"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongotemplate"
 	"github.com/henomis/mailqueue-go/internal/pkg/sendmail"
+	"github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 )
 
 //App struct
@@ -87,7 +87,7 @@ func (a *App) pollEmail() error {
 	}
 
 	audit.Log(audit.Info, "Queue.Dequeue: %s", string(dequeuedEmail.ID))
-	a.addEmailLog(dequeuedEmail.ID, dequeuedEmail.Service, "", email.StatusDequeued)
+	a.addEmailLog(dequeuedEmail.ID, dequeuedEmail.Service, "", storagemodel.StatusDequeued)
 
 	for attempt := 0; attempt < a.smtpClient.Attempts(); attempt++ {
 		err = a.sendEmail(dequeuedEmail)
@@ -102,21 +102,21 @@ func (a *App) pollEmail() error {
 		if errSetProcess != nil {
 			audit.Log(audit.Error, "Queue.SetProcessed: %s", err.Error())
 		}
-		a.addEmailLog(dequeuedEmail.ID, dequeuedEmail.Service, err.Error(), email.StatusErrorCanceled)
+		a.addEmailLog(dequeuedEmail.ID, dequeuedEmail.Service, err.Error(), storagemodel.StatusErrorCanceled)
 	}
 
 	return nil
 }
 
-func (a *App) sendEmail(dequeuedEmail *email.Email) error {
+func (a *App) sendEmail(dequeuedEmail *storagemodel.Email) error {
 
 	audit.Log(audit.Info, "Sending: %s", string(dequeuedEmail.ID))
-	a.addEmailLog(dequeuedEmail.ID, dequeuedEmail.Service, "", email.StatusSending)
+	a.addEmailLog(dequeuedEmail.ID, dequeuedEmail.Service, "", storagemodel.StatusSending)
 
 	err := a.smtpClient.Send(dequeuedEmail)
 	if err != nil {
 		audit.Log(audit.Warning, "Send: %s, %s", string(dequeuedEmail.ID), err.Error())
-		a.addEmailLog(dequeuedEmail.ID, dequeuedEmail.Service, err.Error(), email.StatusErrorSending)
+		a.addEmailLog(dequeuedEmail.ID, dequeuedEmail.Service, err.Error(), storagemodel.StatusErrorSending)
 		return err
 	}
 
@@ -127,7 +127,7 @@ func (a *App) sendEmail(dequeuedEmail *email.Email) error {
 		audit.Log(audit.Error, "Queue.SetProcessed: %s", err.Error())
 	}
 
-	a.addEmailLog(dequeuedEmail.ID, dequeuedEmail.Service, "", email.StatusSent)
+	a.addEmailLog(dequeuedEmail.ID, dequeuedEmail.Service, "", storagemodel.StatusSent)
 
 	return nil
 }
@@ -135,7 +135,7 @@ func (a *App) sendEmail(dequeuedEmail *email.Email) error {
 func (a *App) addEmailLog(emailID, service, errorMessage string, status int) {
 
 	_, err := a.emailLog.Log(
-		&email.Log{
+		&storagemodel.Log{
 			Service: service,
 			Status:  status,
 			EmailID: emailID,

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/henomis/mailqueue-go/internal/pkg/email"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongostorage"
+	"github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 	"github.com/pkg/errors"
 )
 
@@ -56,7 +56,7 @@ func New(mongoEmailLogOptions *MongoEmailLogOptions) (*MongoEmailLog, error) {
 	}, nil
 }
 
-func (mel *MongoEmailLog) Log(log *email.Log) (string, error) {
+func (mel *MongoEmailLog) Log(log *storagemodel.Log) (string, error) {
 
 	log.ID = mongostorage.RandomID()
 	log.Timestamp = time.Now().UTC()
@@ -69,9 +69,9 @@ func (mel *MongoEmailLog) Log(log *email.Log) (string, error) {
 	return id.(string), nil
 }
 
-func (ml *MongoEmailLog) Items(emailID string) ([]email.Log, error) {
+func (ml *MongoEmailLog) Items(emailID string) ([]storagemodel.Log, error) {
 
-	var logItems []email.Log
+	var logItems []storagemodel.Log
 	var sortOptions mongostorage.MongoFindOptions
 
 	filterQuery := mongostorage.Queryf(`{"email_id": "%s"}`, emailID)

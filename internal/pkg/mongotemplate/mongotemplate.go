@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"time"
 
 	"github.com/henomis/mailqueue-go/internal/pkg/mongostorage"
@@ -55,20 +56,23 @@ func New(mongoTemplateOptions *MongoTemplateOptions) (*MongoTemplate, error) {
 
 }
 
-func (mr *MongoTemplate) Set(key string, value interface{}) error {
+// func (mr *MongoTemplate) Set(key string, value interface{}) error {
 
-	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, key)
-	mongoTemplate := storagemodel.Template{
-		ID:       key,
-		Template: value.(string),
-	}
-	err := mr.mongoStorage.ReplaceOrInsert(filterQuery, mongoTemplate)
-	if err != nil {
-		return errors.Wrap(err, "unable to replace or insert value")
-	}
+// 	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, key)
+// 	mongoTemplate := storagemodel.Template{
+// 		TemplateIDAndName: storagemodel.TemplateIDAndName{
+// 			ID:   key,
+// 			Name: key,
+// 			// Template: value.(string),
+// 		},
+// 	}
+// 	err := mr.mongoStorage.ReplaceOrInsert(filterQuery, mongoTemplate)
+// 	if err != nil {
+// 		return errors.Wrap(err, "unable to replace or insert value")
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 func (mr *MongoTemplate) Get(key string) (interface{}, error) {
 
@@ -139,11 +143,15 @@ func (mr *MongoTemplate) Read(id string) (*storagemodel.Template, error) {
 	return &mongoTemplate, nil
 }
 
-func (mr *MongoTemplate) ReadAll(limit, skip int64) ([]storagemodel.Template, int64, error) {
+func (mr *MongoTemplate) ReadAll(limit, skip int64, fields string) ([]storagemodel.Template, int64, error) {
 	var mongoTemplates []storagemodel.Template
 
 	findOptions := mongostorage.SetLimit(nil, limit)
 	findOptions = mongostorage.SetSkip(findOptions, skip)
+	if len(fields) > 0 {
+		fieldsParts := strings.Split(fields, ",")
+		findOptions = mongostorage.SetProjection(nil, fieldsParts)
+	}
 
 	count, err := mr.mongoStorage.CountQuery(mongostorage.Query(""))
 	if err != nil {

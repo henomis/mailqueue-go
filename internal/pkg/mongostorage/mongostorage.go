@@ -327,6 +327,32 @@ func SetSkip(opts MongoFindOptions, offset int64) MongoFindOptions {
 	return opts
 }
 
+func SetProjection(opts MongoFindOptions, fields []string) MongoFindOptions {
+
+	if len(fields) == 0 {
+		return opts
+	}
+
+	if opts == nil {
+		opts = options.Find()
+	}
+
+	queryString := "{"
+	for i, field := range fields {
+		if i == 0 {
+			queryString += fmt.Sprintf(`"%s": 1`, field)
+		} else {
+			queryString += fmt.Sprintf(`, "%s": 1`, field)
+		}
+	}
+	queryString += "}"
+	queryFilter := Query(queryString)
+
+	(*options.FindOptions)(opts).SetProjection(queryFilter)
+
+	return opts
+}
+
 func RandomID() string {
 	return uuid.New().String()
 }

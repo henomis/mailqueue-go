@@ -6,9 +6,9 @@ import (
 	"log"
 	"time"
 
-	"github.com/henomis/mailqueue-go/internal/pkg/email"
 	"github.com/henomis/mailqueue-go/internal/pkg/limiter"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemailqueue"
+	"github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 )
 
 // type Item struct {
@@ -103,7 +103,7 @@ func main() {
 	// 	q.Enqueue(item)
 
 	for i := 0; i < 10; i++ {
-		fmt.Println(q.Enqueue(&email.Email{
+		fmt.Println(q.Enqueue(&storagemodel.Email{
 			ID:          fmt.Sprintf("%d-%d", time.Now().UnixNano(), i),
 			Service:     "service",
 			To:          "no-reply@example.com",
@@ -112,10 +112,10 @@ func main() {
 			Bcc:         "bcc",
 			HTML:        "<h1>Hello</h1>",
 			Data:        "data",
-			Attachments: []email.Attachment{},
+			Attachments: []storagemodel.Attachment{},
 			Template:    "template",
 			Processed:   false,
-			Status:      email.StatusQueued,
+			Status:      storagemodel.StatusQueued,
 		}))
 		time.Sleep(1 * time.Millisecond)
 

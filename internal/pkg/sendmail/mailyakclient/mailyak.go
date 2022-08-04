@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/domodwyer/mailyak/v3"
-	"github.com/henomis/mailqueue-go/internal/pkg/email"
+	"github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 )
 
 const (
@@ -47,7 +47,7 @@ func New(mailYakClientOptions *MailYakClientOptions) *MailYakClient {
 
 }
 
-func (s *MailYakClient) Send(email *email.Email) error {
+func (s *MailYakClient) Send(email *storagemodel.Email) error {
 
 	if s.mailyakInstance == nil {
 		return fmt.Errorf("MailYak instance is nil")

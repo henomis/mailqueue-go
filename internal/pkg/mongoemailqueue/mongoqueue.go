@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/henomis/mailqueue-go/internal/pkg/email"
 	"github.com/henomis/mailqueue-go/internal/pkg/limiter"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongostorage"
-	"github.com/henomis/mailqueue-go/internal/pkg/render"
+	"github.com/henomis/mailqueue-go/internal/pkg/mongotemplate"
+	"github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 	"github.com/pkg/errors"
 )
 
@@ -26,10 +26,10 @@ type MongoEmailQueue struct {
 	mongoQueueOptions *MongoEmailQueueOptions
 	limiter           limiter.Limiter
 	mongoStorage      *mongostorage.MongoStorage
-	render            render.Render
+	mongoTemplate     *mongotemplate.MongoTemplate
 }
 
-func New(mongoQueueOptions *MongoEmailQueueOptions, limiter limiter.Limiter, render render.Render) (*MongoEmailQueue, error) {
+func New(mongoQueueOptions *MongoEmailQueueOptions, limiter limiter.Limiter, mongoTemplate *mongotemplate.MongoTemplate) (*MongoEmailQueue, error) {
 
 	err := validateMongoQueueOptions(mongoQueueOptions)
 	if err != nil {
@@ -61,20 +61,20 @@ func New(mongoQueueOptions *MongoEmailQueueOptions, limiter limiter.Limiter, ren
 		mongoQueueOptions: mongoQueueOptions,
 		limiter:           limiter,
 		mongoStorage:      mongoStorage,
-		render:            render,
+		mongoTemplate:     mongoTemplate,
 	}
 
 	return mongoQueue, nil
 }
 
-func (q *MongoEmailQueue) Enqueue(email *email.Email) (string, error) {
+func (q *MongoEmailQueue) Enqueue(email *storagemodel.Email) (string, error) {
 
 	email.ID = mongostorage.RandomID()
 
-	if len(email.Template) > 0 && q.render != nil {
+	if len(email.Template) > 0 && q.mongoTemplate != nil {
 
 		var buffer bytes.Buffer
-		err := q.render.Execute(strings.NewReader(email.Data), io.Writer(&buffer), email.Template)
+		err := q.mongoTemplate.Execute(strings.NewReader(email.Data), io.Writer(&buffer), email.Template)
 		if err != nil {
 			return "", errors.Wrap(err, "unable to render email")
 		}
@@ -91,7 +91,7 @@ func (q *MongoEmailQueue) Enqueue(email *email.Email) (string, error) {
 
 }
 
-func (q *MongoEmailQueue) Dequeue() (*email.Email, error) {
+func (q *MongoEmailQueue) Dequeue() (*storagemodel.Email, error) {
 
 	filterQuery := mongostorage.Query(`{"processed": false}`)
 	err := q.mongoStorage.WaitCappedCollectionCursor(filterQuery)
@@ -102,7 +102,7 @@ func (q *MongoEmailQueue) Dequeue() (*email.Email, error) {
 	//waiting limiter
 	<-q.limiter.Wait()
 
-	var email email.Email
+	var email storagemodel.Email
 	err = q.mongoStorage.Decode(&email)
 	if err != nil {
 		return nil, errors.Wrap(err, "error decoding data")
@@ -124,13 +124,14 @@ func (q *MongoEmailQueue) SetProcessed(id string) error {
 	return err
 }
 
-func (q *MongoEmailQueue) SetStatus(id string, status email.Status) error {
+func (q *MongoEmailQueue) SetStatus(id string, status storagemodel.Status) error {
 
 	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, id)
 	updateQuery := mongostorage.Queryf(`{"$set": {"status": %d}}`, status)
 
-	if status == email.StatusRead {
-		filterQuery = mongostorage.Queryf(`{"_id": "%s", "status": {"$in": [%d,%d]}}`, id, email.StatusSent, email.StatusRead)
+	if status == storagemodel.StatusRead {
+		filterQuery = mongostorage.Queryf(`{"_id": "%s", "status": {"$in": [%d,%d]}}`,
+			id, storagemodel.StatusSent, storagemodel.StatusRead)
 	}
 
 	err := q.mongoStorage.Update(filterQuery, updateQuery)

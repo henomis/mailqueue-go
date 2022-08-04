@@ -7,8 +7,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/henomis/mailqueue-go/internal/pkg/audit"
-	"github.com/henomis/mailqueue-go/internal/pkg/email"
 	"github.com/henomis/mailqueue-go/internal/pkg/restmodel"
+	"github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 )
 
 var whitePixelGIF = []byte{
@@ -18,8 +18,9 @@ var whitePixelGIF = []byte{
 }
 
 const (
-	DefaultSkip  = 0
-	DefaultLimit = 10
+	DefaultSkip      = 0
+	DefaultLimit     = 10
+	DefaultUnlimited = 10000
 )
 
 type LimitSkip struct {
@@ -77,17 +78,17 @@ func (a *App) setEmailAsRead(c *fiber.Ctx) error {
 		return jsonError(c, "validate params", fmt.Errorf("invalid service"))
 	}
 
-	err := a.emailQueue.SetStatus(id, email.StatusRead)
+	err := a.emailQueue.SetStatus(id, storagemodel.StatusRead)
 	if err != nil {
 		return jsonError(c, "emailQueue.SetStatus", err)
 	}
 
 	_, err = a.emailLog.Log(
-		&email.Log{
+		&storagemodel.Log{
 			Timestamp: time.Now().UTC(),
 			Service:   service,
 			EmailID:   id,
-			Status:    email.StatusRead,
+			Status:    storagemodel.StatusRead,
 		},
 	)
 	if err != nil {
@@ -110,22 +111,22 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 		return jsonError(c, "bodyParser", err)
 	}
 
-	id, err := a.emailQueue.Enqueue(emailToEnqueue.ToStorageEmail())
+	id, err := a.emailQueue.Enqueue(emailToEnqueue.ToStorageModel())
 	if err != nil {
 		return jsonError(c, "emailQueue.Enqueue", err)
 	}
 	audit.Log(audit.Info, "emailQueue.Enqueue: %s", id)
 
-	err = a.emailQueue.SetStatus(id, email.StatusQueued)
+	err = a.emailQueue.SetStatus(id, storagemodel.StatusQueued)
 	if err != nil {
 		return jsonError(c, "emailQueue.SetStatus", err)
 	}
 	_, err = a.emailLog.Log(
-		&email.Log{
+		&storagemodel.Log{
 			Timestamp: time.Now().UTC(),
 			Service:   emailToEnqueue.Service,
 			EmailID:   id,
-			Status:    email.StatusQueued,
+			Status:    storagemodel.StatusQueued,
 		},
 	)
 	if err != nil {
@@ -153,7 +154,7 @@ func (a *App) getLog(c *fiber.Ctx) error {
 	}
 
 	var logItems restmodel.LogItems
-	logItems.FromStorage(storageLogItems)
+	logItems.FromStorageModel(storageLogItems)
 
 	return c.JSON(
 		restmodel.Success(
@@ -194,7 +195,7 @@ func (a *App) getTemplate(c *fiber.Ctx) error {
 	}
 
 	template := &restmodel.Template{}
-	template.FromStorageTemplate(storageTemplate)
+	template.FromStorageModel(storageTemplate)
 
 	return c.JSON(
 		restmodel.Success(
@@ -208,14 +209,15 @@ func (a *App) getTemplates(c *fiber.Ctx) error {
 
 	limitSkip := &LimitSkip{}
 	limitSkip.FromString(c.Query("limit"), c.Query("skip"))
+	fields := c.Query("fields")
 
-	storageTemplates, count, err := a.mongoTemplate.ReadAll(limitSkip.Limit, limitSkip.Skip)
+	storageTemplates, count, err := a.mongoTemplate.ReadAll(limitSkip.Limit, limitSkip.Skip, fields)
 	if err != nil {
 		return jsonError(c, "mongoTemplate.ReadAll", err)
 	}
 
-	var templates restmodel.Templates
-	templates.FromStorage(storageTemplates, count)
+	var templates restmodel.TemplatesCount
+	templates.FromStorageModel(storageTemplates, count)
 
 	return c.JSON(
 		restmodel.Success(
@@ -252,13 +254,11 @@ func (a *App) addTemplate(c *fiber.Ctx) error {
 		return jsonError(c, "bodyParser", err)
 	}
 
-	if len(template.Name) > 100 {
-		return jsonError(c, "validate params", fmt.Errorf("invalid name legth"))
-	} else if len(template.Template) > 5000 {
-		return jsonError(c, "validate params", fmt.Errorf("invalid template length"))
+	if err := validateTemplate(&template); err != nil {
+		return jsonError(c, "validateTemplate", err)
 	}
 
-	id, err := a.mongoTemplate.Create(template.ToStorageTemplate())
+	id, err := a.mongoTemplate.Create(template.ToStorageModel())
 	if err != nil {
 		return jsonError(c, "mongoTemplate.Create", err)
 	}
@@ -283,13 +283,11 @@ func (a *App) updateTemplate(c *fiber.Ctx) error {
 		return jsonError(c, "bodyParser", err)
 	}
 
-	if len(template.Name) > 100 {
-		return jsonError(c, "validate params", fmt.Errorf("invalid name legth"))
-	} else if len(template.Template) > 5000 {
-		return jsonError(c, "validate params", fmt.Errorf("invalid template length"))
+	if err := validateTemplate(&template); err != nil {
+		return jsonError(c, "validateTemplate", err)
 	}
 
-	err := a.mongoTemplate.Update(id, template.ToStorageTemplate())
+	err := a.mongoTemplate.Update(id, template.ToStorageModel())
 	if err != nil {
 		return jsonError(c, "mongoTemplate.Create", err)
 	}
@@ -309,4 +307,14 @@ func jsonError(c *fiber.Ctx, message string, err error) error {
 			err.Error(),
 		),
 	)
+}
+
+func validateTemplate(template *restmodel.Template) error {
+	if len(template.Name) == 0 || len(template.Name) > 50 {
+		return fmt.Errorf("invalid name length")
+	}
+	if len(template.Template) == 0 || len(template.Template) > 5000 {
+		return fmt.Errorf("invalid template length")
+	}
+	return nil
 }

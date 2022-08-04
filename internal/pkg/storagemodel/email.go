@@ -1,4 +1,4 @@
-package email
+package storagemodel
 
 //Status tipo dello stato dell'email
 type Status int

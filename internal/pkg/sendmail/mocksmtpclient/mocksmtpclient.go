@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/henomis/mailqueue-go/internal/pkg/email"
+	"github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 )
 
 type MockSMTPClient struct {
@@ -19,7 +19,7 @@ func New(attempts int) *MockSMTPClient {
 	}
 }
 
-func (c *MockSMTPClient) Send(e *email.Email) error {
+func (c *MockSMTPClient) Send(e *storagemodel.Email) error {
 	fmt.Printf("SENDING %+v\n", e)
 
 	rand.Seed(time.Now().Unix())

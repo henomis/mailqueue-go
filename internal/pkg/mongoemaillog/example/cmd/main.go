@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/henomis/mailqueue-go/internal/pkg/email"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
+	"github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 )
 
 // type Item struct {
@@ -30,7 +30,7 @@ func main() {
 
 	for i := 0; i < 10; i++ {
 		id, err := log.Log(
-			&email.Log{
+			&storagemodel.Log{
 				ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 				Service:   "test",
 				Timestamp: time.Now().UTC(),
