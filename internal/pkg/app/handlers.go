@@ -141,6 +141,26 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 
 }
 
+func (a *App) getLogs(c *fiber.Ctx) error {
+	limitSkip := &LimitSkip{}
+	limitSkip.FromString(c.Query("limit"), c.Query("skip"))
+	fields := c.Query("fields")
+
+	storageLogs, count, err := a.emailLog.ReadAll(limitSkip.Limit, limitSkip.Skip, fields)
+	if err != nil {
+		return jsonError(c, "mongoTemplate.ReadAll", err)
+	}
+
+	var logs restmodel.LogsCount
+	logs.FromStorageModel(storageLogs, count)
+
+	return c.JSON(
+		restmodel.Success(
+			logs,
+		),
+	)
+}
+
 func (a *App) getLog(c *fiber.Ctx) error {
 
 	id := c.Params("email_id")
@@ -153,7 +173,7 @@ func (a *App) getLog(c *fiber.Ctx) error {
 		return jsonError(c, "emailLog.Items", err)
 	}
 
-	var logItems restmodel.LogItems
+	var logItems restmodel.Logs
 	logItems.FromStorageModel(storageLogItems)
 
 	return c.JSON(
@@ -189,7 +209,7 @@ func (a *App) getTemplate(c *fiber.Ctx) error {
 		return jsonError(c, "getTemplate", fmt.Errorf("id is required"))
 	}
 
-	storageTemplate, err := a.mongoTemplate.Read(id)
+	storageTemplate, err := a.emailTemplate.Read(id)
 	if err != nil {
 		return jsonError(c, "mongoTemplate.Read", err)
 	}
@@ -205,13 +225,35 @@ func (a *App) getTemplate(c *fiber.Ctx) error {
 
 }
 
+func (a *App) getEmails(c *fiber.Ctx) error {
+
+	limitSkip := &LimitSkip{}
+	limitSkip.FromString(c.Query("limit"), c.Query("skip"))
+	fields := c.Query("fields")
+
+	storageEmails, count, err := a.emailQueue.ReadAll(limitSkip.Limit, limitSkip.Skip, fields)
+	if err != nil {
+		return jsonError(c, "mongoTemplate.ReadAll", err)
+	}
+
+	var emails restmodel.EmailsCount
+	emails.FromStorageModel(storageEmails, count)
+
+	return c.JSON(
+		restmodel.Success(
+			emails,
+		),
+	)
+
+}
+
 func (a *App) getTemplates(c *fiber.Ctx) error {
 
 	limitSkip := &LimitSkip{}
 	limitSkip.FromString(c.Query("limit"), c.Query("skip"))
 	fields := c.Query("fields")
 
-	storageTemplates, count, err := a.mongoTemplate.ReadAll(limitSkip.Limit, limitSkip.Skip, fields)
+	storageTemplates, count, err := a.emailTemplate.ReadAll(limitSkip.Limit, limitSkip.Skip, fields)
 	if err != nil {
 		return jsonError(c, "mongoTemplate.ReadAll", err)
 	}
@@ -234,7 +276,7 @@ func (a *App) deleteTemplate(c *fiber.Ctx) error {
 		return jsonError(c, "deleteTemplate", fmt.Errorf("id is required"))
 	}
 
-	err := a.mongoTemplate.Delete(id)
+	err := a.emailTemplate.Delete(id)
 	if err != nil {
 		return jsonError(c, "mongoTemplate.Delete", err)
 	}
@@ -258,7 +300,7 @@ func (a *App) addTemplate(c *fiber.Ctx) error {
 		return jsonError(c, "validateTemplate", err)
 	}
 
-	id, err := a.mongoTemplate.Create(template.ToStorageModel())
+	id, err := a.emailTemplate.Create(template.ToStorageModel())
 	if err != nil {
 		return jsonError(c, "mongoTemplate.Create", err)
 	}
@@ -287,7 +329,7 @@ func (a *App) updateTemplate(c *fiber.Ctx) error {
 		return jsonError(c, "validateTemplate", err)
 	}
 
-	err := a.mongoTemplate.Update(id, template.ToStorageModel())
+	err := a.emailTemplate.Update(id, template.ToStorageModel())
 	if err != nil {
 		return jsonError(c, "mongoTemplate.Create", err)
 	}

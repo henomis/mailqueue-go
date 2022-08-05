@@ -15,7 +15,7 @@ import (
 type App struct {
 	emailQueue    *mongoemailqueue.MongoEmailQueue
 	emailLog      *mongoemaillog.MongoEmailLog
-	mongoTemplate *mongotemplate.MongoTemplate
+	emailTemplate *mongotemplate.MongoTemplate
 	smtpClient    sendmail.Client
 	httpServer    *fiber.App
 }
@@ -37,7 +37,7 @@ func New(appOptions AppOptions) (*App, error) {
 		smtpClient:    appOptions.SMTPClient,
 		emailQueue:    appOptions.EmailQueue,
 		emailLog:      appOptions.EmailLog,
-		mongoTemplate: appOptions.EmailTemplate,
+		emailTemplate: appOptions.EmailTemplate,
 	}
 
 	return app, nil
@@ -49,15 +49,16 @@ func (a *App) RunAPI(address string) error {
 	a.httpServer.Get("/api/v1/images/mail/:service/:id", a.setEmailAsRead)
 	a.httpServer.Use("/api/v1", a.authenticationAndAuthorizationMiddleware)
 
-	// viene chiamata dal backend per accodare un'email
-	a.httpServer.Post("/api/v1/mail", a.enqueueEmail)
-	// viene chiamata dal frontend per recuperare i dettagli di un email
-	//a.Server.Get("/api/v1/mail", a.getEmailAll)
-	a.httpServer.Get("/api/v1/mail/:id", a.getEmail)
+	// LOGS
+	a.httpServer.Get("/api/v1/logs", a.getLogs)
+	a.httpServer.Get("/api/v1/logs/:id", a.getLog)
 
-	a.httpServer.Get("/api/v1/log", a.getLog)
-	a.httpServer.Get("/api/v1/log/:email_id", a.getLog)
+	// EMAILS
+	a.httpServer.Get("/api/v1/emails", a.getEmails)
+	a.httpServer.Get("/api/v1/emails/:id", a.getEmail)
+	a.httpServer.Post("/api/v1/emails", a.enqueueEmail)
 
+	// TEMPLATES
 	a.httpServer.Get("/api/v1/templates", a.getTemplates)
 	a.httpServer.Get("/api/v1/templates/:id", a.getTemplate)
 	a.httpServer.Put("/api/v1/templates/:id", a.updateTemplate)

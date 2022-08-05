@@ -2,6 +2,7 @@ package mongoemaillog
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/henomis/mailqueue-go/internal/pkg/mongostorage"
@@ -88,6 +89,29 @@ func (ml *MongoEmailLog) Items(emailID string) ([]storagemodel.Log, error) {
 	//log items must contains the first entry status
 
 	return logItems, err
+}
+
+func (ml *MongoEmailLog) ReadAll(limit, skip int64, fields string) ([]storagemodel.Log, int64, error) {
+	var storageLogs []storagemodel.Log
+
+	findOptions := mongostorage.SetLimit(nil, limit)
+	findOptions = mongostorage.SetSkip(findOptions, skip)
+	if len(fields) > 0 {
+		fieldsParts := strings.Split(fields, ",")
+		findOptions = mongostorage.SetProjection(nil, fieldsParts)
+	}
+
+	count, err := ml.mongoStorage.CountQuery(mongostorage.Query(""))
+	if err != nil {
+		return nil, 0, errors.Wrap(err, "unable count templates")
+	}
+
+	err = ml.mongoStorage.DecodeAll(mongostorage.Query(""), findOptions, &storageLogs)
+	if err != nil {
+		return nil, 0, errors.Wrap(err, "unable find templates")
+	}
+
+	return storageLogs, count, nil
 }
 
 // ---------------

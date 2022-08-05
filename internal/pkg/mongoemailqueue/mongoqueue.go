@@ -142,6 +142,29 @@ func (q *MongoEmailQueue) SetStatus(id string, status storagemodel.Status) error
 	return err
 }
 
+func (q *MongoEmailQueue) ReadAll(limit, skip int64, fields string) ([]storagemodel.Email, int64, error) {
+	var storageEmails []storagemodel.Email
+
+	findOptions := mongostorage.SetLimit(nil, limit)
+	findOptions = mongostorage.SetSkip(findOptions, skip)
+	if len(fields) > 0 {
+		fieldsParts := strings.Split(fields, ",")
+		findOptions = mongostorage.SetProjection(nil, fieldsParts)
+	}
+
+	count, err := q.mongoStorage.CountQuery(mongostorage.Query(""))
+	if err != nil {
+		return nil, 0, errors.Wrap(err, "unable count templates")
+	}
+
+	err = q.mongoStorage.DecodeAll(mongostorage.Query(""), findOptions, &storageEmails)
+	if err != nil {
+		return nil, 0, errors.Wrap(err, "unable find templates")
+	}
+
+	return storageEmails, count, nil
+}
+
 // ---------------
 // Support methods
 // ---------------
