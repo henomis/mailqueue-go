@@ -7,22 +7,20 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
-	"github.com/henomis/mailqueue-go/internal/pkg/mongoemailqueue"
-	"github.com/henomis/mailqueue-go/internal/pkg/mongotemplate"
+	"github.com/henomis/mailqueue-go/internal/pkg/app"
 )
 
 type HTTPServer struct {
 	fiberInstance *fiber.App
-	emailQueue    *mongoemailqueue.MongoEmailQueue
-	emailLog      *mongoemaillog.MongoEmailLog
-	emailTemplate *mongotemplate.MongoTemplate
+	emailQueue    app.EmailQueue
+	emailLog      app.EmailLog
+	emailTemplate app.EmailTemplate
 }
 
 func New(
-	emailQueue *mongoemailqueue.MongoEmailQueue,
-	emailLog *mongoemaillog.MongoEmailLog,
-	emailTemplate *mongotemplate.MongoTemplate,
+	emailQueue app.EmailQueue,
+	emailLog app.EmailLog,
+	emailTemplate app.EmailTemplate,
 ) *HTTPServer {
 
 	fiberInstance := fiber.New(fiber.Config{

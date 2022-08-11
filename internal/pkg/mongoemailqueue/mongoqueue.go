@@ -6,12 +6,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/henomis/mailqueue-go/internal/pkg/limiter"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongostorage"
-	"github.com/henomis/mailqueue-go/internal/pkg/mongotemplate"
 	"github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 	"github.com/pkg/errors"
 )
+
+type Limiter interface {
+	Wait() chan struct{}
+}
+
+type EmailTemplate interface {
+	Execute(inputDataReader io.Reader, outputDataWriter io.Writer, templateID string) error
+}
 
 type MongoEmailQueueOptions struct {
 	Endpoint   string
@@ -23,12 +29,12 @@ type MongoEmailQueueOptions struct {
 
 type MongoEmailQueue struct {
 	mongoQueueOptions *MongoEmailQueueOptions
-	limiter           limiter.Limiter
+	limiter           Limiter
 	mongoStorage      *mongostorage.MongoStorage
-	mongoTemplate     *mongotemplate.MongoTemplate
+	template          EmailTemplate
 }
 
-func New(mongoQueueOptions *MongoEmailQueueOptions, limiter limiter.Limiter, mongoTemplate *mongotemplate.MongoTemplate) (*MongoEmailQueue, error) {
+func New(mongoQueueOptions *MongoEmailQueueOptions, limiter Limiter, mongoTemplate EmailTemplate) (*MongoEmailQueue, error) {
 
 	err := validateMongoQueueOptions(mongoQueueOptions)
 	if err != nil {
@@ -60,7 +66,7 @@ func New(mongoQueueOptions *MongoEmailQueueOptions, limiter limiter.Limiter, mon
 		mongoQueueOptions: mongoQueueOptions,
 		limiter:           limiter,
 		mongoStorage:      mongoStorage,
-		mongoTemplate:     mongoTemplate,
+		template:          mongoTemplate,
 	}
 
 	return mongoQueue, nil
@@ -70,10 +76,10 @@ func (q *MongoEmailQueue) Enqueue(email *storagemodel.Email) (string, error) {
 
 	email.ID = mongostorage.RandomID()
 
-	if len(email.Template) > 0 && q.mongoTemplate != nil {
+	if len(email.Template) > 0 && q.template != nil {
 
 		var buffer bytes.Buffer
-		err := q.mongoTemplate.Execute(strings.NewReader(email.Data), io.Writer(&buffer), email.Template)
+		err := q.template.Execute(strings.NewReader(email.Data), io.Writer(&buffer), email.Template)
 		if err != nil {
 			return "", errors.Wrap(err, "unable to render email")
 		}

@@ -1,23 +1,26 @@
 package watcher
 
 import (
+	"github.com/henomis/mailqueue-go/internal/pkg/app"
 	"github.com/henomis/mailqueue-go/internal/pkg/audit"
-	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
-	"github.com/henomis/mailqueue-go/internal/pkg/mongoemailqueue"
-	"github.com/henomis/mailqueue-go/internal/pkg/sendmail"
 	"github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 )
 
+type SendmailClient interface {
+	Send(e *storagemodel.Email) error
+	Attempts() int
+}
+
 type Watcher struct {
-	smtpClient sendmail.Client
-	emailQueue *mongoemailqueue.MongoEmailQueue
-	emailLog   *mongoemaillog.MongoEmailLog
+	smtpClient SendmailClient
+	emailQueue app.EmailQueue
+	emailLog   app.EmailLog
 }
 
 func New(
-	smtpClient sendmail.Client,
-	emailQueue *mongoemailqueue.MongoEmailQueue,
-	emailLog *mongoemaillog.MongoEmailLog,
+	smtpClient SendmailClient,
+	emailQueue app.EmailQueue,
+	emailLog app.EmailLog,
 ) *Watcher {
 	return &Watcher{
 		smtpClient: smtpClient,
