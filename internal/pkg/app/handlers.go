@@ -187,19 +187,22 @@ func (a *App) getEmail(c *fiber.Ctx) error {
 
 	id := c.Params("id")
 	if len(id) == 0 {
-		return c.Status(fiber.StatusBadRequest).SendString("id is required")
+		return jsonError(c, "getEmail", fmt.Errorf("id is required"))
 	}
 
-	// uuid := c.Params("uuid")
+	storageEmail, err := a.emailQueue.Read(id)
+	if err != nil {
+		return jsonError(c, "mongoQueue.Read", err)
+	}
 
-	// e, err := a.Queue.GetByUUID(email.UniqueID(uuid))
-	// if err != nil {
-	// 	a.AuditLogger.Log(auditlogger.Error, "getEmail: %s", err.Error())
-	// 	return c.Status(400).SendString(err.Error())
-	// }
+	email := &restmodel.Email{}
+	email.FromStorageModel(storageEmail)
 
-	// return c.JSON(e)
-	return nil
+	return c.JSON(
+		restmodel.Success(
+			email,
+		),
+	)
 }
 
 func (a *App) getTemplate(c *fiber.Ctx) error {

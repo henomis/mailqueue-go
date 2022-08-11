@@ -51,7 +51,7 @@ func (a *App) RunAPI(address string) error {
 
 	// LOGS
 	a.httpServer.Get("/api/v1/logs", a.getLogs)
-	a.httpServer.Get("/api/v1/logs/:id", a.getLog)
+	a.httpServer.Get("/api/v1/logs/:email_id", a.getLog)
 
 	// EMAILS
 	a.httpServer.Get("/api/v1/emails", a.getEmails)

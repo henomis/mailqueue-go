@@ -94,19 +94,21 @@ func (ml *MongoEmailLog) Items(emailID string) ([]storagemodel.Log, error) {
 func (ml *MongoEmailLog) ReadAll(limit, skip int64, fields string) ([]storagemodel.Log, int64, error) {
 	var storageLogs []storagemodel.Log
 
+	matchQuery := mongostorage.Queryf(`{"status": %d}`, storagemodel.StatusQueued)
 	findOptions := mongostorage.SetLimit(nil, limit)
+	findOptions = mongostorage.SetSort(findOptions, mongostorage.Query(`{"timestamp": -1}`))
 	findOptions = mongostorage.SetSkip(findOptions, skip)
 	if len(fields) > 0 {
 		fieldsParts := strings.Split(fields, ",")
 		findOptions = mongostorage.SetProjection(nil, fieldsParts)
 	}
 
-	count, err := ml.mongoStorage.CountQuery(mongostorage.Query(""))
+	count, err := ml.mongoStorage.CountQuery(matchQuery)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "unable count templates")
 	}
 
-	err = ml.mongoStorage.DecodeAll(mongostorage.Query(""), findOptions, &storageLogs)
+	err = ml.mongoStorage.DecodeAll(matchQuery, findOptions, &storageLogs)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "unable find templates")
 	}

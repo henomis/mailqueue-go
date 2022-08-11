@@ -165,6 +165,18 @@ func (q *MongoEmailQueue) ReadAll(limit, skip int64, fields string) ([]storagemo
 	return storageEmails, count, nil
 }
 
+func (q *MongoEmailQueue) Read(id string) (*storagemodel.Email, error) {
+	var mongoEmail storagemodel.Email
+
+	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, id)
+	err := q.mongoStorage.FindOne(filterQuery, &mongoEmail)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable find template")
+	}
+
+	return &mongoEmail, nil
+}
+
 // ---------------
 // Support methods
 // ---------------

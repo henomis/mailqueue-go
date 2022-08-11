@@ -32,6 +32,7 @@ type Email struct {
 	Bcc         string      `json:"bcc"`
 	Subject     string      `json:"subject"`
 	Data        string      `json:"data"`
+	HTML        string      `json:"html"`
 	Template    string      `json:"template"`
 	Attachments Attachments `json:"attachments"`
 }
@@ -43,6 +44,7 @@ func (e *Email) FromStorageModel(storageItem *storagemodel.Email) {
 	e.Bcc = storageItem.Bcc
 	e.Subject = storageItem.Subject
 	e.Data = storageItem.Data
+	e.HTML = storageItem.HTML
 	e.Template = storageItem.Template
 	e.Attachments.FromStorageModel(storageItem.Attachments)
 }
