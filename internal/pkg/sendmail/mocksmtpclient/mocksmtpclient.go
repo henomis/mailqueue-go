@@ -24,7 +24,7 @@ func (c *MockSMTPClient) Send(e *storagemodel.Email) error {
 
 	rand.Seed(time.Now().Unix())
 
-	if rand.Intn(2) == 0 {
+	if rand.Intn(3) == 0 {
 		return errors.New("SMTP ERROR")
 	}
 

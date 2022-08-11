@@ -102,7 +102,7 @@ func (ml *MongoEmailLog) GetAll(limit, skip int64, fields string) ([]storagemode
 		findOptions = mongostorage.SetProjection(nil, fieldsParts)
 	}
 
-	count, err := ml.mongoStorage.Count(mongostorage.Query(""))
+	count, err := ml.mongoStorage.Count(matchQuery)
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "unable count templates")
 	}

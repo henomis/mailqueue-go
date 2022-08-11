@@ -56,7 +56,7 @@ func (h *HTTPServer) setupRoutes() {
 
 	// LOGS
 	h.fiberInstance.Get("/api/v1/logs", h.getLogs)
-	h.fiberInstance.Get("/api/v1/logs/:id", h.getLog)
+	h.fiberInstance.Get("/api/v1/logs/:email_id", h.getLog)
 
 	// EMAILS
 	h.fiberInstance.Get("/api/v1/emails", h.getEmails)
