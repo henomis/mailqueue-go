@@ -2,7 +2,7 @@ package limiter
 
 import "time"
 
-//DefaultLimiter is very similar to fixed window limiter but it has variable window start timestamp
+// DefaultLimiter is very similar to fixed window limiter but it has variable window start timestamp
 type DefaultLimiter struct {
 	Allowed   int64
 	Interval  time.Duration
@@ -10,7 +10,7 @@ type DefaultLimiter struct {
 	count     int64
 }
 
-//NewDefaultLimiter create a new instance
+// NewDefaultLimiter create a new instance
 func NewDefaultLimiter(allow int64, interval time.Duration) *DefaultLimiter {
 	return &DefaultLimiter{
 		Allowed:  allow,
@@ -18,7 +18,7 @@ func NewDefaultLimiter(allow int64, interval time.Duration) *DefaultLimiter {
 	}
 }
 
-//Allow require permission to perform an action under a certain limiter
+// Allow require permission to perform an action under a certain limiter
 func (l *DefaultLimiter) Allow() bool {
 
 	now := time.Now().UTC()

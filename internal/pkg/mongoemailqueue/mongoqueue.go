@@ -2,17 +2,22 @@ package mongoemailqueue
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"strings"
 	"time"
 
-	"github.com/henomis/mailqueue-go/internal/pkg/limiter"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongostorage"
-	"github.com/henomis/mailqueue-go/internal/pkg/mongotemplate"
 	"github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 	"github.com/pkg/errors"
 )
+
+type Limiter interface {
+	Wait() chan struct{}
+}
+
+type EmailTemplate interface {
+	Execute(inputDataReader io.Reader, outputDataWriter io.Writer, templateID string) error
+}
 
 type MongoEmailQueueOptions struct {
 	Endpoint   string
@@ -24,12 +29,12 @@ type MongoEmailQueueOptions struct {
 
 type MongoEmailQueue struct {
 	mongoQueueOptions *MongoEmailQueueOptions
-	limiter           limiter.Limiter
+	limiter           Limiter
 	mongoStorage      *mongostorage.MongoStorage
-	mongoTemplate     *mongotemplate.MongoTemplate
+	template          EmailTemplate
 }
 
-func New(mongoQueueOptions *MongoEmailQueueOptions, limiter limiter.Limiter, mongoTemplate *mongotemplate.MongoTemplate) (*MongoEmailQueue, error) {
+func New(mongoQueueOptions *MongoEmailQueueOptions, limiter Limiter, mongoTemplate EmailTemplate) (*MongoEmailQueue, error) {
 
 	err := validateMongoQueueOptions(mongoQueueOptions)
 	if err != nil {
@@ -61,7 +66,7 @@ func New(mongoQueueOptions *MongoEmailQueueOptions, limiter limiter.Limiter, mon
 		mongoQueueOptions: mongoQueueOptions,
 		limiter:           limiter,
 		mongoStorage:      mongoStorage,
-		mongoTemplate:     mongoTemplate,
+		template:          mongoTemplate,
 	}
 
 	return mongoQueue, nil
@@ -71,10 +76,10 @@ func (q *MongoEmailQueue) Enqueue(email *storagemodel.Email) (string, error) {
 
 	email.ID = mongostorage.RandomID()
 
-	if len(email.Template) > 0 && q.mongoTemplate != nil {
+	if len(email.Template) > 0 && q.template != nil {
 
 		var buffer bytes.Buffer
-		err := q.mongoTemplate.Execute(strings.NewReader(email.Data), io.Writer(&buffer), email.Template)
+		err := q.template.Execute(strings.NewReader(email.Data), io.Writer(&buffer), email.Template)
 		if err != nil {
 			return "", errors.Wrap(err, "unable to render email")
 		}
@@ -142,7 +147,19 @@ func (q *MongoEmailQueue) SetStatus(id string, status storagemodel.Status) error
 	return err
 }
 
-func (q *MongoEmailQueue) ReadAll(limit, skip int64, fields string) ([]storagemodel.Email, int64, error) {
+func (q *MongoEmailQueue) Get(id string) (*storagemodel.Email, error) {
+	var mongoEmail storagemodel.Email
+
+	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, id)
+	err := q.mongoStorage.FindOne(filterQuery, &mongoEmail)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable find email")
+	}
+
+	return &mongoEmail, nil
+}
+
+func (q *MongoEmailQueue) GetAll(limit, skip int64, fields string) ([]storagemodel.Email, int64, error) {
 	var storageEmails []storagemodel.Email
 
 	findOptions := mongostorage.SetLimit(nil, limit)
@@ -152,7 +169,7 @@ func (q *MongoEmailQueue) ReadAll(limit, skip int64, fields string) ([]storagemo
 		findOptions = mongostorage.SetProjection(nil, fieldsParts)
 	}
 
-	count, err := q.mongoStorage.CountQuery(mongostorage.Query(""))
+	count, err := q.mongoStorage.Count(mongostorage.Query(""))
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "unable count templates")
 	}
@@ -163,41 +180,4 @@ func (q *MongoEmailQueue) ReadAll(limit, skip int64, fields string) ([]storagemo
 	}
 
 	return storageEmails, count, nil
-}
-
-func (q *MongoEmailQueue) Read(id string) (*storagemodel.Email, error) {
-	var mongoEmail storagemodel.Email
-
-	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, id)
-	err := q.mongoStorage.FindOne(filterQuery, &mongoEmail)
-	if err != nil {
-		return nil, errors.Wrap(err, "unable find template")
-	}
-
-	return &mongoEmail, nil
-}
-
-// ---------------
-// Support methods
-// ---------------
-
-func validateMongoQueueOptions(mongoQueueOptions *MongoEmailQueueOptions) error {
-
-	if len(mongoQueueOptions.Endpoint) == 0 {
-		return fmt.Errorf("invalid endpoint")
-	}
-
-	if len(mongoQueueOptions.Database) == 0 {
-		return fmt.Errorf("invalid database name")
-	}
-
-	if len(mongoQueueOptions.Collection) == 0 {
-		return fmt.Errorf("invalid collection name")
-	}
-
-	if mongoQueueOptions.CappedSize == 0 {
-		return fmt.Errorf("invalid capped size")
-	}
-
-	return nil
 }

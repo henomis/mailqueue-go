@@ -1,7 +1,6 @@
 package mongoemaillog
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -57,7 +56,7 @@ func New(mongoEmailLogOptions *MongoEmailLogOptions) (*MongoEmailLog, error) {
 	}, nil
 }
 
-func (mel *MongoEmailLog) Log(log *storagemodel.Log) (string, error) {
+func (mel *MongoEmailLog) Create(log *storagemodel.Log) (string, error) {
 
 	log.ID = mongostorage.RandomID()
 	log.Timestamp = time.Now().UTC()
@@ -70,7 +69,7 @@ func (mel *MongoEmailLog) Log(log *storagemodel.Log) (string, error) {
 	return id.(string), nil
 }
 
-func (ml *MongoEmailLog) Items(emailID string) ([]storagemodel.Log, error) {
+func (ml *MongoEmailLog) Get(emailID string) ([]storagemodel.Log, error) {
 
 	var logItems []storagemodel.Log
 	var sortOptions mongostorage.MongoFindOptions
@@ -91,7 +90,7 @@ func (ml *MongoEmailLog) Items(emailID string) ([]storagemodel.Log, error) {
 	return logItems, err
 }
 
-func (ml *MongoEmailLog) ReadAll(limit, skip int64, fields string) ([]storagemodel.Log, int64, error) {
+func (ml *MongoEmailLog) GetAll(limit, skip int64, fields string) ([]storagemodel.Log, int64, error) {
 	var storageLogs []storagemodel.Log
 
 	matchQuery := mongostorage.Queryf(`{"status": %d}`, storagemodel.StatusQueued)
@@ -103,7 +102,7 @@ func (ml *MongoEmailLog) ReadAll(limit, skip int64, fields string) ([]storagemod
 		findOptions = mongostorage.SetProjection(nil, fieldsParts)
 	}
 
-	count, err := ml.mongoStorage.CountQuery(matchQuery)
+	count, err := ml.mongoStorage.Count(mongostorage.Query(""))
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "unable count templates")
 	}
@@ -114,25 +113,4 @@ func (ml *MongoEmailLog) ReadAll(limit, skip int64, fields string) ([]storagemod
 	}
 
 	return storageLogs, count, nil
-}
-
-// ---------------
-// Support methods
-// ---------------
-
-func validateMongoEmailLogOptions(mongoEmailLogOptions *MongoEmailLogOptions) error {
-
-	if len(mongoEmailLogOptions.Endpoint) == 0 {
-		return fmt.Errorf("invalid endpoint")
-	}
-
-	if len(mongoEmailLogOptions.Database) == 0 {
-		return fmt.Errorf("invalid database name")
-	}
-
-	if len(mongoEmailLogOptions.Collection) == 0 {
-		return fmt.Errorf("invalid collection name")
-	}
-
-	return nil
 }

@@ -29,7 +29,7 @@ func main() {
 	}
 
 	for i := 0; i < 10; i++ {
-		id, err := log.Log(
+		id, err := log.Create(
 			&storagemodel.Log{
 				ID:        fmt.Sprintf("%d", time.Now().UnixNano()),
 				Service:   "test",
@@ -43,7 +43,7 @@ func main() {
 		time.Sleep(time.Millisecond)
 	}
 
-	items, err := log.Items("test")
+	items, err := log.Get("test")
 	fmt.Println(items, err)
 	// log.Model(&Item{})
 
