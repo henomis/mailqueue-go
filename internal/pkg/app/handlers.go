@@ -83,7 +83,7 @@ func (a *App) setEmailAsRead(c *fiber.Ctx) error {
 		return jsonError(c, "emailQueue.SetStatus", err)
 	}
 
-	_, err = a.emailLog.Log(
+	_, err = a.emailLog.Create(
 		&storagemodel.Log{
 			Timestamp: time.Now().UTC(),
 			Service:   service,
@@ -121,7 +121,7 @@ func (a *App) enqueueEmail(c *fiber.Ctx) error {
 	if err != nil {
 		return jsonError(c, "emailQueue.SetStatus", err)
 	}
-	_, err = a.emailLog.Log(
+	_, err = a.emailLog.Create(
 		&storagemodel.Log{
 			Timestamp: time.Now().UTC(),
 			Service:   emailToEnqueue.Service,
@@ -146,7 +146,7 @@ func (a *App) getLogs(c *fiber.Ctx) error {
 	limitSkip.FromString(c.Query("limit"), c.Query("skip"))
 	fields := c.Query("fields")
 
-	storageLogs, count, err := a.emailLog.ReadAll(limitSkip.Limit, limitSkip.Skip, fields)
+	storageLogs, count, err := a.emailLog.GetAll(limitSkip.Limit, limitSkip.Skip, fields)
 	if err != nil {
 		return jsonError(c, "mongoTemplate.ReadAll", err)
 	}
@@ -168,7 +168,7 @@ func (a *App) getLog(c *fiber.Ctx) error {
 		return jsonError(c, "validate params", fmt.Errorf("invalid email_id"))
 	}
 
-	storageLogItems, err := a.emailLog.Items(id)
+	storageLogItems, err := a.emailLog.Get(id)
 	if err != nil {
 		return jsonError(c, "emailLog.Items", err)
 	}
@@ -209,7 +209,7 @@ func (a *App) getTemplate(c *fiber.Ctx) error {
 		return jsonError(c, "getTemplate", fmt.Errorf("id is required"))
 	}
 
-	storageTemplate, err := a.emailTemplate.Read(id)
+	storageTemplate, err := a.emailTemplate.Get(id)
 	if err != nil {
 		return jsonError(c, "mongoTemplate.Read", err)
 	}
@@ -231,7 +231,7 @@ func (a *App) getEmails(c *fiber.Ctx) error {
 	limitSkip.FromString(c.Query("limit"), c.Query("skip"))
 	fields := c.Query("fields")
 
-	storageEmails, count, err := a.emailQueue.ReadAll(limitSkip.Limit, limitSkip.Skip, fields)
+	storageEmails, count, err := a.emailQueue.GetAll(limitSkip.Limit, limitSkip.Skip, fields)
 	if err != nil {
 		return jsonError(c, "mongoTemplate.ReadAll", err)
 	}
@@ -253,7 +253,7 @@ func (a *App) getTemplates(c *fiber.Ctx) error {
 	limitSkip.FromString(c.Query("limit"), c.Query("skip"))
 	fields := c.Query("fields")
 
-	storageTemplates, count, err := a.emailTemplate.ReadAll(limitSkip.Limit, limitSkip.Skip, fields)
+	storageTemplates, count, err := a.emailTemplate.GetAll(limitSkip.Limit, limitSkip.Skip, fields)
 	if err != nil {
 		return jsonError(c, "mongoTemplate.ReadAll", err)
 	}

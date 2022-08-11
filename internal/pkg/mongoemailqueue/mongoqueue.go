@@ -2,7 +2,6 @@ package mongoemailqueue
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"strings"
 	"time"
@@ -142,7 +141,7 @@ func (q *MongoEmailQueue) SetStatus(id string, status storagemodel.Status) error
 	return err
 }
 
-func (q *MongoEmailQueue) ReadAll(limit, skip int64, fields string) ([]storagemodel.Email, int64, error) {
+func (q *MongoEmailQueue) GetAll(limit, skip int64, fields string) ([]storagemodel.Email, int64, error) {
 	var storageEmails []storagemodel.Email
 
 	findOptions := mongostorage.SetLimit(nil, limit)
@@ -152,7 +151,7 @@ func (q *MongoEmailQueue) ReadAll(limit, skip int64, fields string) ([]storagemo
 		findOptions = mongostorage.SetProjection(nil, fieldsParts)
 	}
 
-	count, err := q.mongoStorage.CountQuery(mongostorage.Query(""))
+	count, err := q.mongoStorage.Count(mongostorage.Query(""))
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "unable count templates")
 	}
@@ -163,29 +162,4 @@ func (q *MongoEmailQueue) ReadAll(limit, skip int64, fields string) ([]storagemo
 	}
 
 	return storageEmails, count, nil
-}
-
-// ---------------
-// Support methods
-// ---------------
-
-func validateMongoQueueOptions(mongoQueueOptions *MongoEmailQueueOptions) error {
-
-	if len(mongoQueueOptions.Endpoint) == 0 {
-		return fmt.Errorf("invalid endpoint")
-	}
-
-	if len(mongoQueueOptions.Database) == 0 {
-		return fmt.Errorf("invalid database name")
-	}
-
-	if len(mongoQueueOptions.Collection) == 0 {
-		return fmt.Errorf("invalid collection name")
-	}
-
-	if mongoQueueOptions.CappedSize == 0 {
-		return fmt.Errorf("invalid capped size")
-	}
-
-	return nil
 }

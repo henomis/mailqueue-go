@@ -11,7 +11,7 @@ import (
 	"github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 )
 
-//App struct
+// App struct
 type App struct {
 	emailQueue    *mongoemailqueue.MongoEmailQueue
 	emailLog      *mongoemaillog.MongoEmailLog
@@ -20,7 +20,7 @@ type App struct {
 	httpServer    *fiber.App
 }
 
-//AppOptions for App
+// AppOptions for App
 type AppOptions struct {
 	EmailQueue    *mongoemailqueue.MongoEmailQueue
 	EmailLog      *mongoemaillog.MongoEmailLog
@@ -29,7 +29,7 @@ type AppOptions struct {
 	HTTPServer    *fiber.App
 }
 
-//New Creates a new app instance
+// New Creates a new app instance
 func New(appOptions AppOptions) (*App, error) {
 
 	app := &App{
@@ -43,7 +43,7 @@ func New(appOptions AppOptions) (*App, error) {
 	return app, nil
 }
 
-//RunAPI the app
+// RunAPI the app
 func (a *App) RunAPI(address string) error {
 
 	a.httpServer.Get("/api/v1/images/mail/:service/:id", a.setEmailAsRead)
@@ -68,7 +68,7 @@ func (a *App) RunAPI(address string) error {
 	return a.httpServer.Listen(address)
 }
 
-//RunPoll func
+// RunPoll func
 func (a *App) RunPoll() error {
 	audit.Log(audit.Info, "Starting email queue poll")
 	for {
@@ -135,7 +135,7 @@ func (a *App) sendEmail(dequeuedEmail *storagemodel.Email) error {
 
 func (a *App) addEmailLog(emailID, service, errorMessage string, status int) {
 
-	_, err := a.emailLog.Log(
+	_, err := a.emailLog.Create(
 		&storagemodel.Log{
 			Service: service,
 			Status:  status,
@@ -148,7 +148,7 @@ func (a *App) addEmailLog(emailID, service, errorMessage string, status int) {
 	}
 }
 
-//Stop func
+// Stop func
 func (a *App) Stop() {
 
 }

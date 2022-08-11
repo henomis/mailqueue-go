@@ -208,7 +208,7 @@ func (ms *MongoStorage) Update(filterQuery MongoQuery, updateQuery interface{}) 
 
 }
 
-func (ms *MongoStorage) CountQuery(query MongoQuery) (int64, error) {
+func (ms *MongoStorage) Count(query MongoQuery) (int64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), ms.timeout)
 	defer cancel()
 
@@ -230,55 +230,6 @@ func (ms *MongoStorage) WaitCappedCollectionCursor(filterQuery MongoQuery) error
 	err = ms.waitCursor(filterQuery)
 	if err != nil {
 		return errors.Wrap(err, "error waiting cursor")
-	}
-
-	return nil
-}
-
-func (ms *MongoStorage) setupTailableAwaitCursor(filterQuery MongoQuery) error {
-
-	if ms.mongoCursor != nil {
-		return nil
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), ms.timeout)
-	defer cancel()
-
-	mongoFindOptions := options.Find().SetCursorType(options.TailableAwait).SetNoCursorTimeout(true)
-
-	mongoCursor, err := ms.mongoCollection.Find(ctx, filterQuery, mongoFindOptions)
-	if err != nil {
-		return err
-	}
-
-	ms.mongoCursor = mongoCursor
-
-	return nil
-}
-
-func (ms *MongoStorage) waitCursor(filterQuery MongoQuery) error {
-
-	for {
-
-		isNextDocumentAvailable := ms.mongoCursor.TryNext(context.Background())
-		if isNextDocumentAvailable {
-			//log.Println("mongo cursor has next document")
-			break
-		} else if ms.mongoCursor.ID() == 0 {
-			//empty collection
-			// log.Println("empty collection")
-			time.Sleep(1 * time.Second)
-			ms.mongoCursor = nil
-			ms.setupTailableAwaitCursor(filterQuery)
-			continue
-		} else if err := ms.mongoCursor.Err(); err != nil {
-			ms.mongoCursor = nil
-			return err
-		} else {
-			//log.Println("mongo cursor else sleep")
-			// waiting element
-			time.Sleep(1 * time.Second)
-		}
 	}
 
 	return nil
@@ -355,23 +306,4 @@ func SetProjection(opts MongoFindOptions, fields []string) MongoFindOptions {
 
 func RandomID() string {
 	return uuid.New().String()
-}
-
-// ---------------
-// Support methods
-// ---------------
-
-func newMongoClient(endpoint string) (*mongo.Client, error) {
-	mongoClientOptions := options.Client().ApplyURI(endpoint)
-	err := mongoClientOptions.Validate()
-	if err != nil {
-		return nil, errors.Wrap(err, "invalid mongodb endpoint")
-	}
-
-	return mongo.NewClient(mongoClientOptions)
-}
-
-func mongoCappedSizeFromUint64(cappedSize uint64) *int64 {
-	cappedSizeAsInt64 := int64(cappedSize)
-	return &cappedSizeAsInt64
 }

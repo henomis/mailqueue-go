@@ -1,14 +1,15 @@
-package render
+package mongotemplate
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"reflect"
 	"text/template"
 )
 
-//Render default implementation
-func Merge(templateBody string, templateDataObject map[string]interface{}, outputDataWriter io.Writer) error {
+// Render default implementation
+func mergeTemplate(templateBody string, templateDataObject map[string]interface{}, outputDataWriter io.Writer) error {
 
 	templateFuncMap := template.FuncMap{
 		"isInt": func(i interface{}) bool {
@@ -72,8 +73,8 @@ func Merge(templateBody string, templateDataObject map[string]interface{}, outpu
 	return nil
 }
 
-//CreateTemplateDataObject utils
-func CreateTemplateDataObject(templateData []byte) (map[string]interface{}, error) {
+// createTemplateDataObject utils
+func createTemplateDataObject(templateData []byte) (map[string]interface{}, error) {
 
 	funcMap := make(map[string]interface{})
 	if err := json.Unmarshal(templateData, &funcMap); err != nil {
@@ -82,4 +83,21 @@ func CreateTemplateDataObject(templateData []byte) (map[string]interface{}, erro
 
 	return funcMap, nil
 
+}
+
+func validateMongoTemplateOptions(mongoTemplateOptions *MongoTemplateOptions) error {
+
+	if len(mongoTemplateOptions.Endpoint) == 0 {
+		return fmt.Errorf("invalid endpoint")
+	}
+
+	if len(mongoTemplateOptions.Database) == 0 {
+		return fmt.Errorf("invalid database name")
+	}
+
+	if len(mongoTemplateOptions.Collection) == 0 {
+		return fmt.Errorf("invalid collection name")
+	}
+
+	return nil
 }

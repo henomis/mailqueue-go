@@ -1,14 +1,12 @@
 package mongotemplate
 
 import (
-	"fmt"
 	"io"
 	"io/ioutil"
 	"strings"
 	"time"
 
 	"github.com/henomis/mailqueue-go/internal/pkg/mongostorage"
-	"github.com/henomis/mailqueue-go/internal/pkg/render"
 	"github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 	"github.com/pkg/errors"
 )
@@ -56,48 +54,11 @@ func New(mongoTemplateOptions *MongoTemplateOptions) (*MongoTemplate, error) {
 
 }
 
-// func (mr *MongoTemplate) Set(key string, value interface{}) error {
+func (mr *MongoTemplate) Execute(inputDataReader io.Reader, outputDataWriter io.Writer, templateID string) error {
 
-// 	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, key)
-// 	mongoTemplate := storagemodel.Template{
-// 		TemplateIDAndName: storagemodel.TemplateIDAndName{
-// 			ID:   key,
-// 			Name: key,
-// 			// Template: value.(string),
-// 		},
-// 	}
-// 	err := mr.mongoStorage.ReplaceOrInsert(filterQuery, mongoTemplate)
-// 	if err != nil {
-// 		return errors.Wrap(err, "unable to replace or insert value")
-// 	}
-
-// 	return nil
-// }
-
-func (mr *MongoTemplate) Get(key string) (interface{}, error) {
-
-	var mongoTemplate storagemodel.Template
-
-	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, key)
-	err := mr.mongoStorage.FindOne(filterQuery, &mongoTemplate)
+	mongoTemplate, err := mr.Get(templateID)
 	if err != nil {
-		return nil, errors.Wrap(err, "unable find template")
-	}
-
-	return mongoTemplate.Template, nil
-}
-
-//Execute implemetation
-func (mr *MongoTemplate) Execute(inputDataReader io.Reader, outputDataWriter io.Writer, mongoKey string) error {
-
-	mongoTemplateBody, err := mr.Get(mongoKey)
-	if err != nil {
-		return errors.Wrapf(err, "unable to get mongo template %s", mongoKey)
-	}
-
-	mongoTemplateBodyAsString, ok := mongoTemplateBody.(string)
-	if !ok {
-		return fmt.Errorf("invalid template body")
+		return errors.Wrapf(err, "unable to get mongo template %s", templateID)
 	}
 
 	rawDataFromReader, err := ioutil.ReadAll(inputDataReader)
@@ -105,12 +66,12 @@ func (mr *MongoTemplate) Execute(inputDataReader io.Reader, outputDataWriter io.
 		return errors.Wrap(err, "unable read input data")
 	}
 
-	templateDataObject, err := render.CreateTemplateDataObject(rawDataFromReader)
+	templateDataObject, err := createTemplateDataObject(rawDataFromReader)
 	if err != nil {
 		return errors.Wrap(err, "unable create template data object")
 	}
 
-	err = render.Merge(mongoTemplateBodyAsString, templateDataObject, outputDataWriter)
+	err = mergeTemplate(mongoTemplate.Template, templateDataObject, outputDataWriter)
 	if err != nil {
 		return errors.Wrap(err, "unable merge template")
 	}
@@ -118,7 +79,6 @@ func (mr *MongoTemplate) Execute(inputDataReader io.Reader, outputDataWriter io.
 	return nil
 }
 
-// CRUD
 func (mr *MongoTemplate) Create(mongoTemplate *storagemodel.Template) (string, error) {
 
 	mongoTemplate.ID = mongostorage.RandomID()
@@ -131,7 +91,7 @@ func (mr *MongoTemplate) Create(mongoTemplate *storagemodel.Template) (string, e
 	return templateID.(string), nil
 }
 
-func (mr *MongoTemplate) Read(id string) (*storagemodel.Template, error) {
+func (mr *MongoTemplate) Get(id string) (*storagemodel.Template, error) {
 	var mongoTemplate storagemodel.Template
 
 	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, id)
@@ -143,7 +103,7 @@ func (mr *MongoTemplate) Read(id string) (*storagemodel.Template, error) {
 	return &mongoTemplate, nil
 }
 
-func (mr *MongoTemplate) ReadAll(limit, skip int64, fields string) ([]storagemodel.Template, int64, error) {
+func (mr *MongoTemplate) GetAll(limit, skip int64, fields string) ([]storagemodel.Template, int64, error) {
 	var mongoTemplates []storagemodel.Template
 
 	findOptions := mongostorage.SetLimit(nil, limit)
@@ -153,7 +113,7 @@ func (mr *MongoTemplate) ReadAll(limit, skip int64, fields string) ([]storagemod
 		findOptions = mongostorage.SetProjection(nil, fieldsParts)
 	}
 
-	count, err := mr.mongoStorage.CountQuery(mongostorage.Query(""))
+	count, err := mr.mongoStorage.Count(mongostorage.Query(""))
 	if err != nil {
 		return nil, 0, errors.Wrap(err, "unable count templates")
 	}
@@ -186,27 +146,6 @@ func (mr *MongoTemplate) Delete(id string) error {
 	err := mr.mongoStorage.DeleteOne(filterQuery)
 	if err != nil {
 		return errors.Wrap(err, "unable delete template")
-	}
-
-	return nil
-}
-
-// ---------------
-// Support methods
-// ---------------
-
-func validateMongoTemplateOptions(mongoTemplateOptions *MongoTemplateOptions) error {
-
-	if len(mongoTemplateOptions.Endpoint) == 0 {
-		return fmt.Errorf("invalid endpoint")
-	}
-
-	if len(mongoTemplateOptions.Database) == 0 {
-		return fmt.Errorf("invalid database name")
-	}
-
-	if len(mongoTemplateOptions.Collection) == 0 {
-		return fmt.Errorf("invalid collection name")
 	}
 
 	return nil
