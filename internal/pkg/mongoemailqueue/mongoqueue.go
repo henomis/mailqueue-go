@@ -141,6 +141,18 @@ func (q *MongoEmailQueue) SetStatus(id string, status storagemodel.Status) error
 	return err
 }
 
+func (q *MongoEmailQueue) Get(id string) (*storagemodel.Email, error) {
+	var mongoEmail storagemodel.Email
+
+	filterQuery := mongostorage.Queryf(`{"_id": "%s"}`, id)
+	err := q.mongoStorage.FindOne(filterQuery, &mongoEmail)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable find email")
+	}
+
+	return &mongoEmail, nil
+}
+
 func (q *MongoEmailQueue) GetAll(limit, skip int64, fields string) ([]storagemodel.Email, int64, error) {
 	var storageEmails []storagemodel.Email
 

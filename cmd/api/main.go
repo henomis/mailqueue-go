@@ -5,11 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/cors"
-	flimiter "github.com/gofiber/fiber/v2/middleware/limiter"
-	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/henomis/mailqueue-go/internal/pkg/app"
+	"github.com/henomis/mailqueue-go/internal/pkg/app/httpserver"
 	"github.com/henomis/mailqueue-go/internal/pkg/audit"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongotemplate"
 
@@ -28,7 +24,7 @@ func main() {
 
 	bindAddress := os.Getenv("BIND_ADDRESS")
 
-	mongotemplate, err := mongotemplate.New(
+	mongoTemplate, err := mongotemplate.New(
 		&mongotemplate.MongoTemplateOptions{
 			Endpoint:   mongoEndpoint,
 			Database:   mongoDatabase,
@@ -49,7 +45,7 @@ func main() {
 			Timeout:    mongoTimeoutAsDuration,
 		},
 		nil,
-		mongotemplate,
+		mongoTemplate,
 	)
 	if err != nil {
 		panic(err)
@@ -67,32 +63,15 @@ func main() {
 		panic(err)
 	}
 
-	httpServer := fiber.New(fiber.Config{
-		StrictRouting: true,
-	})
-	httpServer.Use(logger.New())
-	httpServer.Use(cors.New())
-	httpServer.Use(flimiter.New(flimiter.Config{
-		Max:        200,
-		Expiration: 1 * time.Minute,
-	}))
+	httpServer := httpserver.New(
+		mongoEmailQueue,
+		mongoEmailLog,
+		mongoTemplate,
+	)
 
-	appOptions := app.AppOptions{
-		EmailLog:      mongoEmailLog,
-		EmailQueue:    mongoEmailQueue,
-		EmailTemplate: mongotemplate,
-		HTTPServer:    httpServer,
-	}
-
-	server, err := app.New(appOptions)
+	err = httpServer.Run(bindAddress)
 	if err != nil {
-		panic(err)
-	}
-	defer server.Stop()
-
-	err = server.RunAPI(bindAddress)
-	if err != nil {
-		audit.Log(audit.Error, "RunAPI: %s", err.Error())
+		audit.Log(audit.Error, "httpServer.Run: %s", err.Error())
 	}
 
 }

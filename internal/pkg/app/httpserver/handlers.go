@@ -1,4 +1,4 @@
-package app
+package httpserver
 
 import (
 	"fmt"
@@ -43,30 +43,145 @@ func (ls *LimitSkip) FromString(limit, skip string) {
 
 }
 
-// type queryParameters struct {
-// 	Sort   string
-// 	Offset string
-// 	Limit  string
-// 	Filter string
-// }
-
-// func getSortSkipLimitAndFilter(c *fiber.Ctx) *queryParameters {
-// 	return &queryParameters{
-// 		Sort:   c.Query("sort"),
-// 		Offset: c.Query("offset"),
-// 		Limit:  c.Query("limit"),
-// 		Filter: c.Query("filter"),
-// 	}
-// }
-
-func (a *App) authenticationAndAuthorizationMiddleware(c *fiber.Ctx) error {
+func (h *HTTPServer) authenticationAndAuthorizationMiddleware(c *fiber.Ctx) error {
 
 	//token := c.Get("Authorization")
 
 	return c.Next()
 }
 
-func (a *App) setEmailAsRead(c *fiber.Ctx) error {
+// ----
+// LOGS
+// ----
+
+func (h *HTTPServer) getLogs(c *fiber.Ctx) error {
+	limitSkip := &LimitSkip{}
+	limitSkip.FromString(c.Query("limit"), c.Query("skip"))
+	fields := c.Query("fields")
+
+	storageLogs, count, err := h.emailLog.GetAll(limitSkip.Limit, limitSkip.Skip, fields)
+	if err != nil {
+		return jsonError(c, "mongoTemplate.ReadAll", err)
+	}
+
+	var logs restmodel.LogsCount
+	logs.FromStorageModel(storageLogs, count)
+
+	return c.JSON(
+		restmodel.Success(
+			logs,
+		),
+	)
+}
+
+func (h *HTTPServer) getLog(c *fiber.Ctx) error {
+
+	id := c.Params("email_id")
+	if len(id) == 0 {
+		return jsonError(c, "validate params", fmt.Errorf("invalid email_id"))
+	}
+
+	storageLogItems, err := h.emailLog.Get(id)
+	if err != nil {
+		return jsonError(c, "emailLog.Items", err)
+	}
+
+	var logItems restmodel.Logs
+	logItems.FromStorageModel(storageLogItems)
+
+	return c.JSON(
+		restmodel.Success(
+			&logItems,
+		),
+	)
+}
+
+// ------
+// EMAILS
+// ------
+
+func (h *HTTPServer) getEmail(c *fiber.Ctx) error {
+
+	id := c.Params("id")
+	if len(id) == 0 {
+		return c.Status(fiber.StatusBadRequest).SendString("id is required")
+	}
+
+	storageEmail, err := h.emailQueue.Get(id)
+	if err != nil {
+		return jsonError(c, "emailQueue.Get", err)
+	}
+
+	var email restmodel.Email
+	email.FromStorageModel(storageEmail)
+
+	return c.JSON(
+		restmodel.Success(
+			email,
+		),
+	)
+}
+
+func (h *HTTPServer) getEmails(c *fiber.Ctx) error {
+
+	limitSkip := &LimitSkip{}
+	limitSkip.FromString(c.Query("limit"), c.Query("skip"))
+	fields := c.Query("fields")
+
+	storageEmails, count, err := h.emailQueue.GetAll(limitSkip.Limit, limitSkip.Skip, fields)
+	if err != nil {
+		return jsonError(c, "emailQueue.GetAll", err)
+	}
+
+	var emails restmodel.EmailsCount
+	emails.FromStorageModel(storageEmails, count)
+
+	return c.JSON(
+		restmodel.Success(
+			emails,
+		),
+	)
+
+}
+
+func (h *HTTPServer) enqueueEmail(c *fiber.Ctx) error {
+
+	var emailToEnqueue restmodel.Email
+	if err := c.BodyParser(&emailToEnqueue); err != nil {
+		return jsonError(c, "bodyParser", err)
+	}
+
+	id, err := h.emailQueue.Enqueue(emailToEnqueue.ToStorageModel())
+	if err != nil {
+		return jsonError(c, "emailQueue.Enqueue", err)
+	}
+	audit.Log(audit.Info, "emailQueue.Enqueue: %s", id)
+
+	err = h.emailQueue.SetStatus(id, storagemodel.StatusQueued)
+	if err != nil {
+		return jsonError(c, "emailQueue.SetStatus", err)
+	}
+	_, err = h.emailLog.Create(
+		&storagemodel.Log{
+			Timestamp: time.Now().UTC(),
+			Service:   emailToEnqueue.Service,
+			EmailID:   id,
+			Status:    storagemodel.StatusQueued,
+		},
+	)
+	if err != nil {
+		return jsonError(c, "emailLog.Log", err)
+	}
+
+	return c.JSON(
+		restmodel.Success(
+			&restmodel.EmailID{ID: id},
+		),
+	)
+
+}
+
+func (h *HTTPServer) setEmailAsRead(c *fiber.Ctx) error {
 
 	id := c.Params("id")
 	if len(id) == 0 {
@@ -78,12 +193,12 @@ func (a *App) setEmailAsRead(c *fiber.Ctx) error {
 		return jsonError(c, "validate params", fmt.Errorf("invalid service"))
 	}
 
-	err := a.emailQueue.SetStatus(id, storagemodel.StatusRead)
+	err := h.emailQueue.SetStatus(id, storagemodel.StatusRead)
 	if err != nil {
 		return jsonError(c, "emailQueue.SetStatus", err)
 	}
 
-	_, err = a.emailLog.Create(
+	_, err = h.emailLog.Create(
 		&storagemodel.Log{
 			Timestamp: time.Now().UTC(),
 			Service:   service,
@@ -104,112 +219,18 @@ func (a *App) setEmailAsRead(c *fiber.Ctx) error {
 
 }
 
-func (a *App) enqueueEmail(c *fiber.Ctx) error {
+// ---------
+// TEMPLATES
+// ---------
 
-	var emailToEnqueue restmodel.Email
-	if err := c.BodyParser(&emailToEnqueue); err != nil {
-		return jsonError(c, "bodyParser", err)
-	}
-
-	id, err := a.emailQueue.Enqueue(emailToEnqueue.ToStorageModel())
-	if err != nil {
-		return jsonError(c, "emailQueue.Enqueue", err)
-	}
-	audit.Log(audit.Info, "emailQueue.Enqueue: %s", id)
-
-	err = a.emailQueue.SetStatus(id, storagemodel.StatusQueued)
-	if err != nil {
-		return jsonError(c, "emailQueue.SetStatus", err)
-	}
-	_, err = a.emailLog.Create(
-		&storagemodel.Log{
-			Timestamp: time.Now().UTC(),
-			Service:   emailToEnqueue.Service,
-			EmailID:   id,
-			Status:    storagemodel.StatusQueued,
-		},
-	)
-	if err != nil {
-		return jsonError(c, "emailLog.Log", err)
-	}
-
-	return c.JSON(
-		restmodel.Success(
-			&restmodel.EmailID{ID: id},
-		),
-	)
-
-}
-
-func (a *App) getLogs(c *fiber.Ctx) error {
-	limitSkip := &LimitSkip{}
-	limitSkip.FromString(c.Query("limit"), c.Query("skip"))
-	fields := c.Query("fields")
-
-	storageLogs, count, err := a.emailLog.GetAll(limitSkip.Limit, limitSkip.Skip, fields)
-	if err != nil {
-		return jsonError(c, "mongoTemplate.ReadAll", err)
-	}
-
-	var logs restmodel.LogsCount
-	logs.FromStorageModel(storageLogs, count)
-
-	return c.JSON(
-		restmodel.Success(
-			logs,
-		),
-	)
-}
-
-func (a *App) getLog(c *fiber.Ctx) error {
-
-	id := c.Params("email_id")
-	if len(id) == 0 {
-		return jsonError(c, "validate params", fmt.Errorf("invalid email_id"))
-	}
-
-	storageLogItems, err := a.emailLog.Get(id)
-	if err != nil {
-		return jsonError(c, "emailLog.Items", err)
-	}
-
-	var logItems restmodel.Logs
-	logItems.FromStorageModel(storageLogItems)
-
-	return c.JSON(
-		restmodel.Success(
-			&logItems,
-		),
-	)
-}
-
-func (a *App) getEmail(c *fiber.Ctx) error {
-
-	id := c.Params("id")
-	if len(id) == 0 {
-		return c.Status(fiber.StatusBadRequest).SendString("id is required")
-	}
-
-	// uuid := c.Params("uuid")
-
-	// e, err := a.Queue.GetByUUID(email.UniqueID(uuid))
-	// if err != nil {
-	// 	a.AuditLogger.Log(auditlogger.Error, "getEmail: %s", err.Error())
-	// 	return c.Status(400).SendString(err.Error())
-	// }
-
-	// return c.JSON(e)
-	return nil
-}
-
-func (a *App) getTemplate(c *fiber.Ctx) error {
+func (h *HTTPServer) getTemplate(c *fiber.Ctx) error {
 
 	id := c.Params("id")
 	if len(id) == 0 {
 		return jsonError(c, "getTemplate", fmt.Errorf("id is required"))
 	}
 
-	storageTemplate, err := a.emailTemplate.Get(id)
+	storageTemplate, err := h.emailTemplate.Get(id)
 	if err != nil {
 		return jsonError(c, "mongoTemplate.Read", err)
 	}
@@ -225,35 +246,13 @@ func (a *App) getTemplate(c *fiber.Ctx) error {
 
 }
 
-func (a *App) getEmails(c *fiber.Ctx) error {
+func (h *HTTPServer) getTemplates(c *fiber.Ctx) error {
 
 	limitSkip := &LimitSkip{}
 	limitSkip.FromString(c.Query("limit"), c.Query("skip"))
 	fields := c.Query("fields")
 
-	storageEmails, count, err := a.emailQueue.GetAll(limitSkip.Limit, limitSkip.Skip, fields)
-	if err != nil {
-		return jsonError(c, "mongoTemplate.ReadAll", err)
-	}
-
-	var emails restmodel.EmailsCount
-	emails.FromStorageModel(storageEmails, count)
-
-	return c.JSON(
-		restmodel.Success(
-			emails,
-		),
-	)
-
-}
-
-func (a *App) getTemplates(c *fiber.Ctx) error {
-
-	limitSkip := &LimitSkip{}
-	limitSkip.FromString(c.Query("limit"), c.Query("skip"))
-	fields := c.Query("fields")
-
-	storageTemplates, count, err := a.emailTemplate.GetAll(limitSkip.Limit, limitSkip.Skip, fields)
+	storageTemplates, count, err := h.emailTemplate.GetAll(limitSkip.Limit, limitSkip.Skip, fields)
 	if err != nil {
 		return jsonError(c, "mongoTemplate.ReadAll", err)
 	}
@@ -269,14 +268,14 @@ func (a *App) getTemplates(c *fiber.Ctx) error {
 
 }
 
-func (a *App) deleteTemplate(c *fiber.Ctx) error {
+func (h *HTTPServer) deleteTemplate(c *fiber.Ctx) error {
 
 	id := c.Params("id")
 	if len(id) == 0 {
 		return jsonError(c, "deleteTemplate", fmt.Errorf("id is required"))
 	}
 
-	err := a.emailTemplate.Delete(id)
+	err := h.emailTemplate.Delete(id)
 	if err != nil {
 		return jsonError(c, "mongoTemplate.Delete", err)
 	}
@@ -289,7 +288,7 @@ func (a *App) deleteTemplate(c *fiber.Ctx) error {
 
 }
 
-func (a *App) addTemplate(c *fiber.Ctx) error {
+func (h *HTTPServer) createTemplate(c *fiber.Ctx) error {
 
 	var template restmodel.Template
 	if err := c.BodyParser(&template); err != nil {
@@ -300,7 +299,7 @@ func (a *App) addTemplate(c *fiber.Ctx) error {
 		return jsonError(c, "validateTemplate", err)
 	}
 
-	id, err := a.emailTemplate.Create(template.ToStorageModel())
+	id, err := h.emailTemplate.Create(template.ToStorageModel())
 	if err != nil {
 		return jsonError(c, "mongoTemplate.Create", err)
 	}
@@ -313,7 +312,7 @@ func (a *App) addTemplate(c *fiber.Ctx) error {
 
 }
 
-func (a *App) updateTemplate(c *fiber.Ctx) error {
+func (h *HTTPServer) updateTemplate(c *fiber.Ctx) error {
 
 	id := c.Params("id")
 	if len(id) == 0 {
@@ -329,7 +328,7 @@ func (a *App) updateTemplate(c *fiber.Ctx) error {
 		return jsonError(c, "validateTemplate", err)
 	}
 
-	err := a.emailTemplate.Update(id, template.ToStorageModel())
+	err := h.emailTemplate.Update(id, template.ToStorageModel())
 	if err != nil {
 		return jsonError(c, "mongoTemplate.Create", err)
 	}

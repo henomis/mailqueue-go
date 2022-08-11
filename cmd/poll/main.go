@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/henomis/mailqueue-go/internal/pkg/app"
+	"github.com/henomis/mailqueue-go/internal/pkg/app/watcher"
 	"github.com/henomis/mailqueue-go/internal/pkg/audit"
 	"github.com/henomis/mailqueue-go/internal/pkg/limiter"
 	"github.com/henomis/mailqueue-go/internal/pkg/mongoemaillog"
@@ -27,7 +27,7 @@ func main() {
 
 	fixedWindowLiminter := limiter.NewFixedWindowLimiter(limiterAllowed, time.Duration(limiterInterval)*time.Minute)
 
-	queue, err := mongoemailqueue.New(
+	mongoEmailQueue, err := mongoemailqueue.New(
 		&mongoemailqueue.MongoEmailQueueOptions{
 			Endpoint:   mongoEndpoint,
 			Database:   mongoDatabase,
@@ -42,7 +42,7 @@ func main() {
 		panic(err)
 	}
 
-	log, err := mongoemaillog.New(
+	mongoEmailLog, err := mongoemaillog.New(
 		&mongoemaillog.MongoEmailLogOptions{
 			Endpoint:   mongoEndpoint,
 			Database:   mongoDatabase,
@@ -67,23 +67,15 @@ func main() {
 		},
 	)
 
-	// smtpClient := mocksmtpclient.New(3)
+	watcher := watcher.New(
+		smtpClient,
+		mongoEmailQueue,
+		mongoEmailLog,
+	)
 
-	appOptions := app.AppOptions{
-		EmailQueue: queue,
-		EmailLog:   log,
-		SMTPClient: smtpClient,
-	}
-
-	poll, err := app.New(appOptions)
+	err = watcher.Run()
 	if err != nil {
-		panic(err)
-	}
-	defer poll.Stop()
-
-	err = poll.RunPoll()
-	if err != nil {
-		audit.Log(audit.Error, "RunPoll: %s", err.Error())
+		audit.Log(audit.Error, "watcher.Run: %s", err.Error())
 	}
 
 }
