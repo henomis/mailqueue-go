@@ -15,16 +15,15 @@ services:
     volumes:
       - /tmp/pippo/:/data/db/
     image: mongo:4.2.14
-    container_name: mongodb
+    container_name: mongodb-server
     hostname: mongodb
     networks:          
     - mailqueue-go-net
   mailqueue-go-poll:
     build:
       context: ./
+      dockerfile: poll.Dockerfile
       target: prod
-      args:
-        - TYPE=poll
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -34,29 +33,15 @@ services:
     image: mailqueue-go-poll
     container_name: mailqueue-go-poll
     hostname: mailqueue-go-poll          
-    environment:
-      - MONGO_ENDPOINT=mongodb://admin:pass@mongodb:27017/admin?authSource=admin
-      - MONGO_DB=test
-      - MONGO_DB_SIZE=1000000
-      - MONGO_TIMEOUT=10
-      - SMTP_ALLOW=10
-      - SMTP_INTERVAL_MINUTE=1      
-      - SMTP_SERVER=localhost
-      - SMTP_USERNAME=username@localhost
-      - SMTP_PASSWORD=password
-      - SMTP_FROM=username@localhost
-      - SMTP_FROMNAME=fromname
-      - SMTP_REPLYTO=noreply@localhost
-      - SMTP_ATTEMPTS=3
-      - LOG_OUTPUT=stdout
     networks:          
-      - mailqueue-go-net         
+      - mailqueue-go-net
+    env_file:
+      - .env     
   mailqueue-go-api:
     build:
       context: ./
+      dockerfile: api.Dockerfile
       target: prod
-      args:
-        - TYPE=api
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -68,17 +53,12 @@ services:
     hostname: mailqueue-go-api
     ports:
       - 8080:8080
-    environment:
-      - MONGO_ENDPOINT=mongodb://admin:pass@mongodb:27017/admin?authSource=admin
-      - MONGO_DB=test
-      - MONGO_DB_SIZE=1000000
-      - MONGO_TIMEOUT=10
-      - BIND_ADDRESS=:8080
-      - LOG_OUTPUT=stdout
     networks:          
       - mailqueue-go-net
+    env_file:
+      - .env     
 
 networks:
   mailqueue-go-net:
-    external: true  
+    external: false  
 
