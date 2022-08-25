@@ -124,13 +124,25 @@ func (h *HTTPServer) getEmail(c *fiber.Ctx) error {
 
 func (h *HTTPServer) getEmails(c *fiber.Ctx) error {
 
+	var storageEmails []storagemodel.Email
+	var count int64
+	var err error
+
 	limitSkip := &LimitSkip{}
 	limitSkip.FromString(c.Query("limit"), c.Query("skip"))
 	fields := c.Query("fields")
+	mode := c.Query("mode")
 
-	storageEmails, count, err := h.emailQueue.GetAll(limitSkip.Limit, limitSkip.Skip, fields)
-	if err != nil {
-		return jsonError(c, "emailQueue.GetAll", err)
+	if mode == "with_logs" {
+		storageEmails, count, err = h.emailQueue.GetAllWithLogs(limitSkip.Limit, limitSkip.Skip)
+		if err != nil {
+			return jsonError(c, "emailQueue.GetAll", err)
+		}
+	} else {
+		storageEmails, count, err = h.emailQueue.GetAll(limitSkip.Limit, limitSkip.Skip, fields)
+		if err != nil {
+			return jsonError(c, "emailQueue.GetAll", err)
+		}
 	}
 
 	var emails restmodel.EmailsCount

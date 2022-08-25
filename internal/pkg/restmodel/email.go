@@ -35,6 +35,7 @@ type Email struct {
 	HTML        string      `json:"html"`
 	Template    string      `json:"template"`
 	Attachments Attachments `json:"attachments"`
+	Log         Logs        `json:"log,omitempty"`
 }
 
 func (e *Email) FromStorageModel(storageItem *storagemodel.Email) {
@@ -47,6 +48,7 @@ func (e *Email) FromStorageModel(storageItem *storagemodel.Email) {
 	e.HTML = storageItem.HTML
 	e.Template = storageItem.Template
 	e.Attachments.FromStorageModel(storageItem.Attachments)
+	e.Log.FromStorageModel(storageItem.Log)
 }
 
 func (e *Email) ToStorageModel() *storagemodel.Email {

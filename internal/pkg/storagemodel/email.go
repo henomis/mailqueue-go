@@ -35,6 +35,7 @@ type Email struct {
 	Attachments Attachments `json:"attachments" bson:"attachments"`
 	Processed   bool        `json:"processed" bson:"processed"`
 	Status      uint64      `json:"status" bson:"status"`
+	Log         []Log       `json:"log,omitempty" bson:"log"`
 }
 
 type Attachments []Attachment

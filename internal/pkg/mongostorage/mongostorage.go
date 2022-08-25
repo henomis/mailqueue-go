@@ -15,6 +15,7 @@ import (
 )
 
 type MongoQuery bson.M
+type MongoQuerya bson.A
 type MongoFindOptions *options.FindOptions
 
 type MongoStorage struct {
@@ -208,6 +209,23 @@ func (ms *MongoStorage) Update(filterQuery MongoQuery, updateQuery interface{}) 
 
 }
 
+func (ms *MongoStorage) Aggregate(pipeline MongoQuerya, data interface{}) error {
+	ctx, cancel := context.WithTimeout(context.Background(), ms.timeout)
+	defer cancel()
+
+	cursor, err := ms.mongoCollection.Aggregate(ctx, pipeline)
+	if err != nil {
+		return errors.Wrap(err, "unable aggregate data")
+	}
+
+	err = cursor.All(ctx, data)
+	if err != nil {
+		return errors.Wrap(err, "unable to fetch data")
+	}
+
+	return nil
+}
+
 func (ms *MongoStorage) Count(query MongoQuery) (int64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), ms.timeout)
 	defer cancel()
@@ -249,6 +267,22 @@ func Query(query string) MongoQuery {
 
 func Queryf(query string, args ...interface{}) MongoQuery {
 	return Query(fmt.Sprintf(query, args...))
+}
+
+func Querya(query string) MongoQuerya {
+
+	var bsonArray bson.A
+
+	err := json.Unmarshal([]byte(query), &bsonArray)
+	if err != nil {
+		return MongoQuerya(bson.A{})
+	}
+
+	return MongoQuerya(bsonArray)
+}
+
+func Queryaf(query string, args ...interface{}) MongoQuerya {
+	return Querya(fmt.Sprintf(query, args...))
 }
 
 func SetSort(opts MongoFindOptions, query MongoQuery) MongoFindOptions {

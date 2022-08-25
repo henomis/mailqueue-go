@@ -181,3 +181,37 @@ func (q *MongoEmailQueue) GetAll(limit, skip int64, fields string) ([]storagemod
 
 	return storageEmails, count, nil
 }
+
+func (q *MongoEmailQueue) GetAllWithLogs(limit, skip int64) ([]storagemodel.Email, int64, error) {
+	var storageEmails []storagemodel.Email
+
+	aggregationQuery := mongostorage.Queryaf(
+		`[
+			{
+			  "$lookup": {
+				"from": "log", 
+				"localField": "_id", 
+				"foreignField": "email_id", 
+				"as": "log"
+			  }
+			}, {
+			  "$limit": %d
+			}, {
+			  "$skip": %d
+			}
+		  ]`,
+		limit,
+		skip,
+	)
+	err := q.mongoStorage.Aggregate(aggregationQuery, &storageEmails)
+	if err != nil {
+		return nil, 0, errors.Wrap(err, "unable find emails")
+	}
+
+	count, err := q.mongoStorage.Count(mongostorage.Query(""))
+	if err != nil {
+		return nil, 0, errors.Wrap(err, "unable count emails")
+	}
+
+	return storageEmails, count, nil
+}

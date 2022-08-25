@@ -15,6 +15,7 @@ type EmailQueue interface {
 	SetStatus(id string, status storagemodel.Status) error
 	Get(id string) (*storagemodel.Email, error)
 	GetAll(limit, skip int64, fields string) ([]storagemodel.Email, int64, error)
+	GetAllWithLogs(limit, skip int64) ([]storagemodel.Email, int64, error)
 }
 
 type EmailLog interface {
