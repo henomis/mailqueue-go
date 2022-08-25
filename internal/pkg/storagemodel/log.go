@@ -3,10 +3,10 @@ package storagemodel
 import "time"
 
 type Log struct {
-	ID        string    `json:"id" bson:"_id"`
-	Service   string    `json:"service" bson:"service"`
-	Timestamp time.Time `json:"timestamp" bson:"timestamp"`
-	EmailID   string    `json:"email_id" bson:"email_id"`
-	Status    int       `json:"status" bson:"status"`
-	Error     string    `json:"error" bson:"error,omitempty"`
+	ID        string    `bson:"_id"`
+	Service   string    `bson:"service"`
+	Timestamp time.Time `bson:"timestamp"`
+	EmailID   string    `bson:"email_id"`
+	Status    int       `bson:"status"`
+	Error     string    `bson:"error,omitempty"`
 }

@@ -23,19 +23,19 @@ const (
 
 //Email represent email structure
 type Email struct {
-	ID          string      `json:"uuid" bson:"_id"`
-	Service     string      `json:"service" bson:"service"`
-	To          string      `json:"to" bson:"to"`
-	Cc          string      `json:"cc" bson:"cc"`
-	Bcc         string      `json:"bcc" bson:"bcc"`
-	Subject     string      `json:"subject" bson:"subject"`
-	HTML        string      `json:"html" bson:"html"`
-	Data        string      `json:"data" bson:"data"`
-	Template    string      `json:"template" bson:"template"`
-	Attachments Attachments `json:"attachments" bson:"attachments"`
-	Processed   bool        `json:"processed" bson:"processed"`
-	Status      uint64      `json:"status" bson:"status"`
-	Log         []Log       `json:"log,omitempty" bson:"log"`
+	ID          string      `bson:"_id"`
+	Service     string      `bson:"service"`
+	To          string      `bson:"to"`
+	Cc          string      `bson:"cc"`
+	Bcc         string      `bson:"bcc"`
+	Subject     string      `bson:"subject"`
+	HTML        string      `bson:"html"`
+	Data        string      `bson:"data"`
+	Template    string      `bson:"template"`
+	Attachments Attachments `bson:"attachments"`
+	Processed   bool        `bson:"processed"`
+	Status      uint64      `bson:"status"`
+	Log         []Log       `bson:"log"`
 }
 
 type Attachments []Attachment
