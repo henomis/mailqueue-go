@@ -1,6 +1,6 @@
 # 📤 Mailqueue-go
 
-Simple SMTP HTTP/API client that uses MongoDB as queue.
+General purpose email queue with REST API interface.
 
 ## Features
 
@@ -10,64 +10,18 @@ Simple SMTP HTTP/API client that uses MongoDB as queue.
 - 🔒 Automatic TLS support
 - ✉️ SMTP client send limiter
 
-## mailqueue-go-api
-
-This is the API HTTP REST backend. You can use the following endpoints/verbs:
-
-### email
-
-This enqueue or get email resources.
-
-```bash
-POST /api/v1/mail
-GET /api/v1/mail
-GET /api/v1/mail/:uuid
-```
-
-### log
-
-This will retreive events related to one email
-
-```bash
-GET /api/v1/log
-GET /api/v1/log/:uuid
-```
-
-### template
-
-These are CRUD operation over templates
-
-```bash
-GET /api/v1/template
-GET /api/v1/template/:id
-PUT /api/v1/template/:id
-POST /api/v1/template
-DELETE /api/v1/emplate/:id
-```
-
-### read
-
-This will support white pixel and marks as read email.
-
-```bash
-GET /img/mail/:uuid
-```
-
-## mailqueue-go-poll
-
-This is the SMTP client, it will refer to one email account service.
-
 ## Build
 
-This command will build `bin/mailqueue-go-api` and `bin/mailqueue-go-poll`.
+Use `Makefile` to build `bin/mailqueue-go-api` and `bin/mailqueue-go-watcher`.
 
 ```bash
 make
 ```
 
+
 ## Docker
 
-If you are using Docker you can start the whole system with:
+You can start a complete mailqueue-go stack with docker-compose.
 
 ```bash
 docker-compose up
@@ -75,34 +29,43 @@ docker-compose up
 
 ## Env
 
-You have to setup variables in yout bash environnment or in your `docker-compose.yml`
-
-### api
+Put this in your `.env` file and modify it to your needs.
 
 ```bash
-export MONGO_ENDPOINT=mongodb://admin:pass@localhost:27017/admin?authSource=admin
-export MONGO_DB=test
-export MONGO_DB_SIZE=1000000
-export MONGO_TIMEOUT=10
-export BIND_ADDRESS=":8080"
-export LOG_OUTPUT="stdout"
-```
+MONGO_ENDPOINT=mongodb://admin:pass@mongodb:27017
+MONGO_DB=test
+MONGO_LOG_DB_SIZE=1000000
+MONGO_EMAIL_DB_SIZE=1000000
+MONGO_TIMEOUT=10
+BIND_ADDRESS=:8080
+SMTP_ALLOW=10
+SMTP_INTERVAL_MINUTE=1
+SMTP_SERVER=localhost
+SMTP_USERNAME=username@localhost
+SMTP_PASSWORD=password
+SMTP_FROM=username@localhost
+SMTP_FROMNAME=fromname
+SMTP_REPLYTO=noreply@localhost
+SMTP_ATTEMPTS=3
+LOG_OUTPUT=stdout
+````
 
-### poll
+## API
 
-```bash
-export MONGO_ENDPOINT=mongodb://admin:pass@localhost:27017/admin?authSource=admin
-export MONGO_DB=test
-export MONGO_DB_SIZE=1000000
-export MONGO_TIMEOUT=10
-export SMTP_ALLOW=10
-export SMTP_INTERVAL_MINUTE=1
-export SMTP_SERVER=localhost
-export SMTP_USERNAME=username@localhost
-export SMTP_PASSWORD=password
-export SMTP_FROM=username@localhost
-export SMTP_FROMNAME=fromname
-export SMTP_REPLYTO=noreply@localhost
-export SMTP_ATTEMPTS=3
-export LOG_OUTPUT=stdout
-```
+API endpoint prefix is `/api/v1`.
+
+| Method | Route | Description |
+|--------|-------|-------------|
+|`GET`| `/logs` | Get all logs|
+|`GET`| `/logs/{email_id}`|  Get logs for email with id `{email_id}`|
+|`GET`| `/emails` | Get all emails|
+|`GET`| `/emails/{id}` | Get email with id `{id}`|
+|`POST`| `/emails` | Enqueue new email|
+|`GET`| `/templates` | Get all templates|
+|`GET`| `/templates/{id}` | Get template with id `{id}`|
+|`PUT`| `/templates/{id}` | Update template with id `{id}`|
+|`POST`| `/templates` | Create new template|
+|`DELETE`| `/templates/{id}` | Delete template with id `{id}`|
+|`GET`|`/images/mail/:service/{id}`| Tracking open email|
+
+### Models

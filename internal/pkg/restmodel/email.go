@@ -6,6 +6,30 @@ import (
 
 type Emails []Email
 
+type Email struct {
+	Service     string      `json:"service"`
+	To          string      `json:"to"`
+	Cc          string      `json:"cc"`
+	Bcc         string      `json:"bcc"`
+	Subject     string      `json:"subject"`
+	Data        string      `json:"data"`
+	HTML        string      `json:"html"`
+	Template    string      `json:"template"`
+	Attachments Attachments `json:"attachments"`
+	Log         Logs        `json:"log,omitempty"`
+}
+
+type Attachments []Attachment
+type Attachment struct {
+	Name string `json:"name" bson:"name"`
+	Mime string `json:"mime" bson:"mime"`
+	Data string `json:"data" bson:"data"`
+}
+
+type EmailID struct {
+	ID string `json:"id"`
+}
+
 func (e *Emails) FromStorageModel(storageItems []storagemodel.Email) {
 	for _, storageItem := range storageItems {
 		var email Email
@@ -23,19 +47,6 @@ func (e *EmailsCount) FromStorageModel(storageItems []storagemodel.Email, count 
 
 	e.Emails.FromStorageModel(storageItems)
 	e.Count = count
-}
-
-type Email struct {
-	Service     string      `json:"service"`
-	To          string      `json:"to"`
-	Cc          string      `json:"cc"`
-	Bcc         string      `json:"bcc"`
-	Subject     string      `json:"subject"`
-	Data        string      `json:"data"`
-	HTML        string      `json:"html"`
-	Template    string      `json:"template"`
-	Attachments Attachments `json:"attachments"`
-	Log         Logs        `json:"log,omitempty"`
 }
 
 func (e *Email) FromStorageModel(storageItem *storagemodel.Email) {
@@ -64,8 +75,6 @@ func (e *Email) ToStorageModel() *storagemodel.Email {
 	}
 }
 
-type Attachments []Attachment
-
 func (a *Attachments) FromStorageModel(storageItems []storagemodel.Attachment) {
 	for _, storageItem := range storageItems {
 		var attachment Attachment
@@ -85,12 +94,6 @@ func (a Attachments) ToStorageModel() storagemodel.Attachments {
 	return attachments
 }
 
-type Attachment struct {
-	Name string `json:"name" bson:"name"`
-	Mime string `json:"mime" bson:"mime"`
-	Data string `json:"data" bson:"data"`
-}
-
 func (a *Attachment) FromStorageModel(storageItem *storagemodel.Attachment) {
 	a.Name = storageItem.Name
 	a.Mime = storageItem.Mime
@@ -103,8 +106,4 @@ func (a *Attachment) ToStorageModel() storagemodel.Attachment {
 		Mime: a.Mime,
 		Data: a.Data,
 	}
-}
-
-type EmailID struct {
-	ID string `json:"id"`
 }

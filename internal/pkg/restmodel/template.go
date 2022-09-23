@@ -4,6 +4,16 @@ import "github.com/henomis/mailqueue-go/internal/pkg/storagemodel"
 
 type Templates []Template
 
+type Template struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Template string `json:"template"`
+}
+
+type TemplateID struct {
+	ID string `json:"id"`
+}
+
 func (t *Templates) FromStorageModel(storageItems []storagemodel.Template) {
 	for _, storageItem := range storageItems {
 		var template Template
@@ -23,12 +33,6 @@ func (t *TemplatesCount) FromStorageModel(storageItems []storagemodel.Template, 
 	t.Count = count
 }
 
-type Template struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Template string `json:"template"`
-}
-
 func (t *Template) ToStorageModel() *storagemodel.Template {
 	return &storagemodel.Template{
 		ID:       t.ID,
@@ -41,8 +45,4 @@ func (t *Template) FromStorageModel(s *storagemodel.Template) {
 	t.ID = s.ID
 	t.Name = s.Name
 	t.Template = s.Template
-}
-
-type TemplateID struct {
-	ID string `json:"id"`
 }

@@ -19,10 +19,10 @@ services:
     hostname: mongodb
     networks:          
     - mailqueue-go-net
-  mailqueue-go-poll:
+  mailqueue-go-watcher:
     build:
       context: ./
-      dockerfile: poll.Dockerfile
+      dockerfile: watcher.Dockerfile
       target: prod
     restart: unless-stopped
     logging:
@@ -30,9 +30,9 @@ services:
       options:
         max-size: "50m"
         max-file: "3"
-    image: mailqueue-go-poll
-    container_name: mailqueue-go-poll
-    hostname: mailqueue-go-poll          
+    image: mailqueue-go-watcher
+    container_name: mailqueue-go-watcher
+    hostname: mailqueue-go-watcher          
     networks:          
       - mailqueue-go-net
     env_file:

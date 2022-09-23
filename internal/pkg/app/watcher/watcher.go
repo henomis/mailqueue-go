@@ -31,9 +31,9 @@ func New(
 
 func (w *Watcher) Run() error {
 
-	audit.Log(audit.Info, "Starting email queue poll")
+	audit.Log(audit.Info, "Starting email queue watcher")
 	for {
-		err := w.pollEmail()
+		err := w.watchEmail()
 		if err != nil {
 			return err
 		}
@@ -41,7 +41,7 @@ func (w *Watcher) Run() error {
 
 }
 
-func (w *Watcher) pollEmail() error {
+func (w *Watcher) watchEmail() error {
 
 	dequeuedEmail, err := w.emailQueue.Dequeue()
 	if err != nil {
