@@ -1,1 +1,0 @@
-GET http://localhost:8080/api/v1/emails/3fb378bb-dfef-4491-907f-4303894f3ba5 HTTP/1.1

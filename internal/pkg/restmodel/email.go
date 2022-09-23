@@ -7,6 +7,7 @@ import (
 type Emails []Email
 
 type Email struct {
+	ID          string      `json:"id"`
 	Service     string      `json:"service"`
 	To          string      `json:"to"`
 	Cc          string      `json:"cc"`
@@ -50,6 +51,7 @@ func (e *EmailsCount) FromStorageModel(storageItems []storagemodel.Email, count 
 }
 
 func (e *Email) FromStorageModel(storageItem *storagemodel.Email) {
+	e.ID = storageItem.ID
 	e.Service = storageItem.Service
 	e.To = storageItem.To
 	e.Cc = storageItem.Cc

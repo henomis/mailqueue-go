@@ -4,5 +4,5 @@ Content-Type: application/json
 
 {
     "name": "hello world",
-    "template": "\u003ch1\u003eHello, world! \u003c/h1\u003e"
+    "template": "\u003ch1\u003eHello, \u007b\u007b.name\u007d\u007d! \u003c/h1\u003e"
 }
