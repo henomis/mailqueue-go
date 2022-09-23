@@ -11,7 +11,7 @@ type Logs []Log
 type Log struct {
 	ID        string    `json:"id"`
 	Service   string    `json:"service"`
-	Timestmap time.Time `json:"timestamp"`
+	Timestamp time.Time `json:"timestamp"`
 	EmailID   string    `json:"email_id"`
 	Status    int       `json:"status"`
 	Error     string    `json:"error,omitempty"`
@@ -33,7 +33,7 @@ func (l *Logs) FromStorageModel(storageItems []storagemodel.Log) {
 func (li *Log) FromStorageModel(storageItem *storagemodel.Log) {
 	li.ID = storageItem.ID
 	li.Service = storageItem.Service
-	li.Timestmap = storageItem.Timestamp
+	li.Timestamp = storageItem.Timestamp
 	li.EmailID = storageItem.EmailID
 	li.Status = storageItem.Status
 	li.Error = storageItem.Error

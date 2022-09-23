@@ -11,7 +11,7 @@ import (
 // type Item struct {
 // 	UUID      string `bson:"_id"`
 // 	Service   string `json:"appname" bson:"service"`
-// 	Timestmap int64  `json:"timestamp" bson:"timestamp"`
+// 	Timestamp int64  `json:"timestamp" bson:"timestamp"`
 // 	EmailID   string `json:"uuid" bson:"email_id"`
 // 	Status    int    `json:"status" bson:"status"`
 // 	Error     string `json:"error" bson:"error"`
@@ -51,7 +51,7 @@ func main() {
 	// 	_, err = log.Log(&Item{
 	// 		UUID:      fmt.Sprintf("uuid-%d", i),
 	// 		Service:   "test",
-	// 		Timestmap: time.Now().Unix(),
+	// 		Timestamp: time.Now().Unix(),
 	// 		EmailID:   fmt.Sprintf("email-%d", 10),
 	// 		Status:    i,
 	// 		Error:     "",
