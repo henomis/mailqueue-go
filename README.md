@@ -1,5 +1,7 @@
 # 📤 Mailqueue-go
 
+[![Build Status](https://github.com/henomis/mailqueue-go/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/henomis/mailqueue-go/actions/workflows/test.yml?query=branch%3Amain) [![GoDoc](https://godoc.org/github.com/henomis/mailqueue-go?status.svg)](https://godoc.org/github.com/henomis/mailqueue-go) [![Go Report Card](https://goreportcard.com/badge/github.com/henomis/mailqueue-go)](https://goreportcard.com/report/github.com/henomis/mailqueue-go) [![GitHub release](https://img.shields.io/github/release/henomis/mailqueue-go.svg)](https://github.com/henomis/mailqueue-go/releases)
+
 General purpose email queue with REST API interface.
 
 ## Features
