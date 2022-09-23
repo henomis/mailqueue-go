@@ -8,7 +8,4 @@ build:
 test:
 	go test ./... -v
 
-.PHONY: run
 
-#run: build
-# ./bin/mystdhttp
