@@ -1,2 +1,2 @@
 ### Delete template by id
-DELETE http://localhost:8080/api/v1/templates/template1 HTTP/1.1
+DELETE http://localhost:8080/api/v1/templates/a61823d5-189a-445b-a0f2-540563cd6436 HTTP/1.1
