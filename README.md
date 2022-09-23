@@ -8,7 +8,7 @@ General purpose email queue with REST API interface.
 - 👨‍👩‍👧‍👦 Full suppor to Cc, Bcc, reply-to fields
 - 🌐 HTML template engine
 - 🔒 Automatic TLS support
-- ✉️ SMTP client send limiter
+- ✉️ SMTP client limiter
 
 ## Build
 
@@ -68,3 +68,4 @@ API endpoint prefix is `/api/v1`.
 |`DELETE`| `/templates/{id}` | Delete template with id `{id}`|
 |`GET`|`/images/mail/{service}/{id}`| Tracking open email|
 
+Please refer to [this directory](examples/rest) for examples.
