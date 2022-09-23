@@ -66,6 +66,5 @@ API endpoint prefix is `/api/v1`.
 |`PUT`| `/templates/{id}` | Update template with id `{id}`|
 |`POST`| `/templates` | Create new template|
 |`DELETE`| `/templates/{id}` | Delete template with id `{id}`|
-|`GET`|`/images/mail/:service/{id}`| Tracking open email|
+|`GET`|`/images/mail/{service}/{id}`| Tracking open email|
 
-### Models
